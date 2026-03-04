@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campaign Manager - Performance Monitoring</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sl: {
+              50: '#f7fbfc', 100: '#f1f7f9', 200: '#e3eaed', 300: '#d0dadd',
+              400: '#9aaab0', 500: '#677b82', 600: '#475e66', 700: '#3d5761',
+              800: '#1c3036', 900: '#102126',
+            },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; background: #f7fbfc; color: #1c3036; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24' stroke='%239aaab0' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    .tab-active { background: white; color: #1c3036; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+    .tab-inactive { color: #677b82; }
+    .kpi-card { border: 1px solid #e3eaed; border-radius: 16px; padding: 20px; background: white; box-shadow: 0 0 0 4px rgba(227,234,237,0.6); }
+    .bar-anim { animation: barGrow 0.6s ease-out; }
+    @keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  </style>
+</head>
+<body>
+
+  <!-- NAV BAR -->
+  <header class="flex items-center justify-between border-b bg-white px-5 py-2.5" style="border-color:#e3eaed">
+    <div class="flex items-center gap-7">
+      <div class="flex items-center gap-2.5">
+        <div class="flex items-center justify-center rounded-lg text-white font-bold" style="width:32px;height:32px;background:#1c3036;font-size:11px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="12,3 22,21 2,21" fill="white"/></svg>
+        </div>
+        <span class="text-sm font-semibold" style="color:#1c3036">Campaign Manager</span>
+      </div>
+      <nav class="flex items-center gap-1">
+        <button class="rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82">Campaigns</button>
+        <button class="rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82">Media Library</button>
+        <button class="rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82" onclick="window.location.href='prototype-insight-analysis.html'">Insight Analysis</button>
+        <button class="rounded-lg px-3.5 py-1.5 text-sm font-medium text-white" style="background:#1c3036">Performance</button>
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="rounded-lg p-1.5 hover:bg-gray-50" style="color:#9aaab0">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="rounded-full" style="width:32px;height:32px;background:#0c67ff"></div>
+    </div>
+  </header>
+
+  <!-- FILTER BAR -->
+  <div class="flex items-center justify-between bg-white px-6 py-3 border-b" style="border-color:#e3eaed">
+    <div class="flex items-center gap-3">
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Campaign</span>
+        <select id="campaign-select" class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:200px" onchange="switchCampaign(this.value)">
+          <option value="summer-refresh">Summer Refresh 2026</option>
+          <option value="back-to-school">Back to School Promo</option>
+          <option value="new-launch">New Product Launch Q1</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Brand</span>
+        <select class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:130px">
+          <option>All Brands</option>
+          <option>Coca-Cola</option>
+          <option>Fanta</option>
+          <option>Sprite</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Retail Chain</span>
+        <select class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:130px">
+          <option>All Chains</option>
+          <option>Carrefour</option>
+          <option>Auchan</option>
+          <option>E.Leclerc</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 rounded-lg border px-3 py-1.5" style="border-color:#e3eaed">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9aaab0" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="text-sm" style="color:#3d5761">Feb 3 – Mar 2, 2026</span>
+      </div>
+      <div class="flex items-center gap-2 rounded-lg px-3 py-1.5" style="background:#12b76a1a">
+        <div class="rounded-full" style="width:8px;height:8px;background:#12b76a"></div>
+        <span class="text-xs font-medium" style="color:#12b76a">Campaign Active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="mx-auto px-6 py-6" style="max-width:1200px">
+    <div class="flex flex-col gap-8 fade-in" id="page-content">
+
+      <!-- PAGE HEADER -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center rounded-xl" style="width:40px;height:40px;background:#f1f7f9">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475e66" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20V10"/>
+              <path d="M18 20V4"/>
+              <path d="M6 20v-4"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-semibold" style="color:#1c3036">Performance Monitoring</h1>
+            <p class="text-xs" style="color:#677b82">Summer Refresh 2026 &middot; 312 stores &middot; 28 days running</p>
+          </div>
+        </div>
+        <button class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-gray-50 flex items-center gap-2" style="border-color:#e3eaed;color:#475e66">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export Report
+        </button>
+      </div>
+
+      <!-- SECTION: CAMPAIGN KPIs -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center rounded-md px-2.5 py-1 font-bold uppercase tracking-wider text-white" style="background:#12b76a;font-size:10px;letter-spacing:0.06em">ROI</span>
+          <h2 class="text-sm font-semibold" style="color:#475e66">Campaign Performance</h2>
+        </div>
+        <div class="grid gap-4" style="grid-template-columns:repeat(5,1fr)">
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">ROI</p>
+            <p class="text-2xl font-bold" style="color:#12b76a">3.42x</p>
+            <p class="mt-1 text-xs" style="color:#677b82">€3.42 return per €1 spent</p>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">ROAS</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">4.18x</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 12.4%</span><span class="text-xs ml-1" style="color:#677b82">vs. benchmark</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Incremental Sales</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">€418K</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 23.6%</span><span class="text-xs ml-1" style="color:#677b82">vs. control</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Sales Uplift</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">+18.4%</p>
+            <div class="mt-1 flex items-center gap-1.5">
+              <div class="rounded-full" style="width:6px;height:6px;background:#0c67ff"></div>
+              <span class="text-xs" style="color:#677b82">Exposed vs. Control</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Media Spend</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">€100K</p>
+            <div class="mt-1">
+              <div class="rounded-full" style="height:4px;background:#f1f7f9;overflow:hidden">
+                <div class="rounded-full" style="height:100%;width:72%;background:#0c67ff"></div>
+              </div>
+              <p class="text-xs mt-1" style="color:#677b82">72% of budget used</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: PERFORMANCE OVER TIME -->
+      <div class="flex flex-col gap-4">
+        <h2 class="text-base font-semibold" style="color:#1c3036">Performance Over Time</h2>
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-medium" style="color:#677b82">Indicator</span>
+            <select id="perf-indicator" class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:200px">
+              <option value="sales">Incremental Sales (€K)</option>
+              <option value="uplift">Sales Uplift (%)</option>
+              <option value="roi">ROI</option>
+              <option value="roas">ROAS</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-1.5">
+              <div class="rounded" style="width:20px;height:3px;background:#0c67ff"></div>
+              <span class="text-xs" style="color:#677b82">Exposed Group</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="rounded" style="width:20px;height:3px;background:#f04438"></div>
+              <span class="text-xs" style="color:#677b82">Control Group</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="rounded" style="width:20px;height:3px;background:#12b76a"></div>
+              <span class="text-xs" style="color:#677b82">Incremental</span>
+            </div>
+          </div>
+        </div>
+        <div id="perf-chart"></div>
+      </div>
+
+      <!-- SECTION: BRAND / SKU BREAKDOWN -->
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold" style="color:#1c3036">Performance by Brand & SKU</h2>
+          <div class="inline-flex rounded-lg p-0.5" style="background:#f1f7f9;border:1px solid #e3eaed" id="breakdown-toggle">
+            <button class="brk-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-active" data-val="brand">By Brand</button>
+            <button class="brk-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-inactive" data-val="sku">By SKU</button>
+          </div>
+        </div>
+        <div class="overflow-hidden rounded-xl border bg-white" style="border-color:#e3eaed" id="breakdown-table"></div>
+      </div>
+
+      <!-- SECTION: SHOPPER BEHAVIOR IMPACT -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center rounded-md px-2.5 py-1 font-bold uppercase tracking-wider text-white" style="background:#7c3aed;font-size:10px;letter-spacing:0.06em">SHOPPERS</span>
+          <h2 class="text-sm font-semibold" style="color:#475e66">Shopper Behavior Impact</h2>
+        </div>
+        <p class="text-xs" style="color:#677b82">Profile of purchasers in exposed stores vs. control baseline</p>
+
+        <div class="grid gap-4" style="grid-template-columns:1fr 1fr">
+          <!-- Exposed vs Control comparison -->
+          <div class="rounded-2xl border bg-white p-5" style="border-color:#e3eaed">
+            <h3 class="text-sm font-semibold mb-4" style="color:#1c3036">Purchase Profile Comparison</h3>
+            <div class="flex flex-col gap-3" id="profile-comparison"></div>
+          </div>
+
+          <!-- Behavior metrics -->
+          <div class="rounded-2xl border bg-white p-5" style="border-color:#e3eaed">
+            <h3 class="text-sm font-semibold mb-4" style="color:#1c3036">Behavior Metrics</h3>
+            <div class="flex flex-col gap-4" id="behavior-metrics"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: CLIENT DYNAMICS -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center rounded-md px-2.5 py-1 font-bold uppercase tracking-wider text-white" style="background:#1ecaf0;font-size:10px;letter-spacing:0.06em">DYNAMICS</span>
+          <h2 class="text-sm font-semibold" style="color:#475e66">Client Dynamics</h2>
+        </div>
+        <p class="text-xs" style="color:#677b82">Net client movements driven by the campaign in exposed stores</p>
+
+        <div class="grid gap-4" style="grid-template-columns:repeat(5,1fr)">
+          <div class="kpi-card" style="border-left:3px solid #12b76a">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Clients Gained</p>
+            <p class="text-2xl font-bold" style="color:#12b76a">+4,280</p>
+            <p class="mt-1 text-xs" style="color:#677b82">New to brand</p>
+          </div>
+          <div class="kpi-card" style="border-left:3px solid #f04438">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Clients Lost</p>
+            <p class="text-2xl font-bold" style="color:#f04438">-1,890</p>
+            <p class="mt-1 text-xs" style="color:#677b82">Stopped purchasing</p>
+          </div>
+          <div class="kpi-card" style="border-left:3px solid #0c67ff">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Over-Consumed</p>
+            <p class="text-2xl font-bold" style="color:#0c67ff">6,420</p>
+            <p class="mt-1 text-xs" style="color:#677b82">Increased freq. +42%</p>
+          </div>
+          <div class="kpi-card" style="border-left:3px solid #f5702a">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Under-Consumed</p>
+            <p class="text-2xl font-bold" style="color:#f5702a">2,150</p>
+            <p class="mt-1 text-xs" style="color:#677b82">Decreased freq. -28%</p>
+          </div>
+          <div class="kpi-card" style="border-left:3px solid #1c3036">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Net Effect</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">+6,660</p>
+            <p class="mt-1 text-xs" style="color:#12b76a">Positive impact &#9650;</p>
+          </div>
+        </div>
+
+        <!-- Client flow visualization -->
+        <div class="rounded-2xl border bg-white p-5" style="border-color:#e3eaed">
+          <h3 class="text-sm font-semibold mb-4" style="color:#1c3036">Client Flow Breakdown</h3>
+          <div id="client-flow"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- DETAIL MODAL -->
+  <div id="detail-modal" class="hidden" style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center">
+    <div style="position:fixed;inset:0;background:rgba(16,33,38,0.5)" onclick="closeDetail()"></div>
+    <div class="fade-in" style="position:relative;background:white;border-radius:16px;padding:32px;width:600px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-lg font-semibold" style="color:#1c3036" id="modal-title">SKU Detail</h2>
+        <button onclick="closeDetail()" class="rounded-lg p-1 hover:bg-gray-50" style="color:#9aaab0">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    // =====================================================================
+    // DATA
+    // =====================================================================
+    const WEEKS = ['W1','W2','W3','W4'];
+
+    const CAMPAIGNS = {
+      'summer-refresh': {
+        name: 'Summer Refresh 2026', stores: 312, days: 28,
+        roi: 3.42, roas: 4.18, incSales: 418, uplift: 18.4, spend: 100, budgetPct: 72,
+      },
+      'back-to-school': {
+        name: 'Back to School Promo', stores: 245, days: 21,
+        roi: 2.87, roas: 3.52, incSales: 298, uplift: 14.2, spend: 85, budgetPct: 100,
+      },
+      'new-launch': {
+        name: 'New Product Launch Q1', stores: 156, days: 14,
+        roi: 1.94, roas: 2.61, incSales: 156, uplift: 22.8, spend: 60, budgetPct: 47,
+      },
+    };
+
+    const PERF_CHART = {
+      sales: { label:'Incremental Sales (€K)', exposed:[85,102,118,113], control:[72,74,76,75], unit:'€', suffix:'K' },
+      uplift: { label:'Sales Uplift (%)', exposed:[15.2,16.8,18.1,18.4], control:[0,0,0,0], unit:'', suffix:'%' },
+      roi: { label:'ROI', exposed:[2.1,2.8,3.2,3.42], control:[1,1,1,1], unit:'', suffix:'x' },
+      roas: { label:'ROAS', exposed:[2.6,3.4,3.9,4.18], control:[1,1,1,1], unit:'', suffix:'x' },
+    };
+
+    const BRAND_DATA = [
+      { name:'Coca-Cola Classic', sku:'5449000000996', incSales:'€186K', roi:4.12, roas:5.02, uplift:22.4, share:44.5 },
+      { name:'Coca-Cola Zero', sku:'5449000131805', incSales:'€94K', roi:3.28, roas:4.01, uplift:18.6, share:22.5 },
+      { name:'Fanta Orange', sku:'5449000011527', incSales:'€62K', roi:2.94, roas:3.58, uplift:15.2, share:14.8 },
+      { name:'Sprite', sku:'5449000004840', incSales:'€48K', roi:2.41, roas:2.94, uplift:12.8, share:11.5 },
+      { name:'Coca-Cola Cherry', sku:'5449000227355', incSales:'€28K', roi:1.86, roas:2.27, uplift:8.4, share:6.7 },
+    ];
+
+    const SKU_DATA = [
+      { name:'Coca-Cola Classic 33cl x6', sku:'5449000000996', incSales:'€68K', roi:4.82, roas:5.88, uplift:28.4, volume:'42,180 units' },
+      { name:'Coca-Cola Classic 1.5L', sku:'5449000000989', incSales:'€54K', roi:3.94, roas:4.81, uplift:21.2, volume:'18,640 units' },
+      { name:'Coca-Cola Classic 33cl', sku:'5449000000972', incSales:'€38K', roi:3.61, roas:4.40, uplift:19.8, volume:'31,420 units' },
+      { name:'Coca-Cola Zero 33cl x6', sku:'5449000131805', incSales:'€42K', roi:3.48, roas:4.24, uplift:20.6, volume:'28,340 units' },
+      { name:'Coca-Cola Zero 1.5L', sku:'5449000131812', incSales:'€32K', roi:2.96, roas:3.61, uplift:16.4, volume:'12,860 units' },
+      { name:'Fanta Orange 33cl x6', sku:'5449000011527', incSales:'€28K', roi:3.12, roas:3.80, uplift:17.2, volume:'22,140 units' },
+      { name:'Fanta Orange 1.5L', sku:'5449000011534', incSales:'€22K', roi:2.64, roas:3.22, uplift:13.8, volume:'8,920 units' },
+      { name:'Sprite 33cl x6', sku:'5449000004840', incSales:'€24K', roi:2.58, roas:3.15, uplift:14.6, volume:'18,460 units' },
+      { name:'Sprite 1.5L', sku:'5449000004857', incSales:'€18K', roi:2.12, roas:2.59, uplift:10.2, volume:'7,280 units' },
+      { name:'Coca-Cola Cherry 33cl x6', sku:'5449000227355', incSales:'€16K', roi:1.98, roas:2.41, uplift:9.6, volume:'12,680 units' },
+    ];
+
+    const PROFILE_DATA = [
+      { label:'Avg. Basket Size', exposed:'€16.80', control:'€13.40', diff:'+25.4%' },
+      { label:'Items per Transaction', exposed:'3.8', control:'2.9', diff:'+31.0%' },
+      { label:'Visit Frequency', exposed:'2.4x', control:'2.1x', diff:'+14.3%' },
+      { label:'Category Cross-buy', exposed:'2.6', control:'1.8', diff:'+44.4%' },
+      { label:'Promo Sensitivity', exposed:'34%', control:'28%', diff:'+6pp' },
+    ];
+
+    const BEHAVIOR_DATA = [
+      { label:'New-to-brand Buyers', value:'4,280', pct:18.2, color:'#12b76a', benchmark:'12.4%' },
+      { label:'Repeat Purchasers', value:'12,640', pct:53.8, color:'#0c67ff', benchmark:'48.2%' },
+      { label:'Multi-pack Buyers', value:'8,920', pct:38.0, color:'#7c3aed', benchmark:'29.6%' },
+      { label:'Cross-category Buyers', value:'6,180', pct:26.3, color:'#1ecaf0', benchmark:'18.1%' },
+    ];
+
+    const CLIENT_FLOW = [
+      { label:'New to Brand', count:4280, pct:18.2, color:'#12b76a', icon:'plus' },
+      { label:'Reactivated', count:2840, pct:12.1, color:'#0c67ff', icon:'refresh' },
+      { label:'Over-Consumed', count:6420, pct:27.3, color:'#7c3aed', icon:'trending-up' },
+      { label:'Stable', count:8240, pct:35.1, color:'#677b82', icon:'minus' },
+      { label:'Under-Consumed', count:2150, pct:9.1, color:'#f5702a', icon:'trending-down' },
+      { label:'Lost / Churned', count:1890, pct:8.0, color:'#f04438', icon:'x' },
+    ];
+
+    let brkView = 'brand';
+    let brkSortKey = 'roi', brkSortDir = 'desc';
+
+    // =====================================================================
+    // HELPERS
+    // =====================================================================
+    function delta(val, suffix='%') {
+      if (val === 0) return `<span style="color:#677b82;font-size:12px">&#8594; 0</span>`;
+      const pos = val > 0;
+      const col = pos ? '#12b76a' : '#f04438';
+      const arr = pos ? '&#9650;' : '&#9660;';
+      return `<span style="color:${col};font-size:12px;font-weight:500">${arr} ${Math.abs(val)}${suffix}</span>`;
+    }
+
+    // =====================================================================
+    // PERFORMANCE CHART
+    // =====================================================================
+    function buildPerfChart() {
+      const indicator = document.getElementById('perf-indicator').value;
+      const d = PERF_CHART[indicator];
+      const W = 900, H = 260, PX = 55, PY = 25;
+      const allVals = [...d.exposed, ...d.control.filter(v => v > 0)];
+      const min = Math.min(...allVals) * 0.85;
+      const max = Math.max(...allVals) * 1.1;
+      const range = max - min || 1;
+
+      function toPoints(data) {
+        return data.map((v,i) => ({
+          x: PX + i * ((W - PX * 2) / (data.length - 1)),
+          y: PY + (1 - (v - min) / range) * (H - PY * 2),
+          v
+        }));
+      }
+
+      const expPts = toPoints(d.exposed);
+      const ctrlPts = d.control[0] > 0 ? toPoints(d.control) : null;
+      const incPts = d.exposed.map((v,i) => v - d.control[i]).map(v => v > 0 ? v : 0);
+      const incDataPts = toPoints(incPts.map(v => v + (min < 0 ? 0 : min)));
+
+      const expPath = expPts.map((p,i) => `${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+      const expArea = expPath + ` L${expPts[expPts.length-1].x},${H-PY} L${expPts[0].x},${H-PY} Z`;
+
+      let ctrlPath = '';
+      if (ctrlPts) {
+        ctrlPath = ctrlPts.map((p,i) => `${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+      }
+
+      const yTicks = 5;
+      let gridLines = '', yLabels = '';
+      for (let i = 0; i <= yTicks; i++) {
+        const y = PY + i * ((H - PY * 2) / yTicks);
+        const val = max - i * (range / yTicks);
+        gridLines += `<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="#e3eaed" stroke-dasharray="3 3"/>`;
+        yLabels += `<text x="${PX-8}" y="${y+4}" text-anchor="end" fill="#677b82" font-size="11">${d.unit}${val.toFixed(1)}${d.suffix}</text>`;
+      }
+      let xLabels = '';
+      expPts.forEach((p,i) => { xLabels += `<text x="${p.x}" y="${H-2}" text-anchor="middle" fill="#677b82" font-size="11">${WEEKS[i]}</text>`; });
+
+      let incArea = '';
+      if (ctrlPts && d.control[0] > 0) {
+        let incPath = '';
+        for (let i = 0; i < expPts.length; i++) {
+          incPath += `${i===0?'M':'L'}${expPts[i].x},${expPts[i].y}`;
+        }
+        for (let i = ctrlPts.length - 1; i >= 0; i--) {
+          incPath += `L${ctrlPts[i].x},${ctrlPts[i].y}`;
+        }
+        incPath += 'Z';
+        incArea = `<path d="${incPath}" fill="#12b76a" fill-opacity="0.12"/>`;
+      }
+
+      document.getElementById('perf-chart').innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:300px">
+          ${gridLines}${yLabels}${xLabels}
+          <path d="${expArea}" fill="#0c67ff" fill-opacity="0.06"/>
+          ${incArea}
+          ${ctrlPts && d.control[0] > 0 ? `<path d="${ctrlPath}" fill="none" stroke="#f04438" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round"/>` : ''}
+          <path d="${expPath}" fill="none" stroke="#0c67ff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          ${expPts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="white" stroke="#0c67ff" stroke-width="2"/>`).join('')}
+          ${ctrlPts && d.control[0] > 0 ? ctrlPts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="white" stroke="#f04438" stroke-width="1.5"/>`).join('') : ''}
+        </svg>
+      `;
+    }
+
+    document.getElementById('perf-indicator').addEventListener('change', buildPerfChart);
+
+    // =====================================================================
+    // BRAND/SKU TABLE
+    // =====================================================================
+    function buildBreakdownTable() {
+      const data = brkView === 'brand' ? BRAND_DATA : SKU_DATA;
+      const sortIcon = `<svg style="display:inline;vertical-align:middle;margin-left:4px" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#9aaab0" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>`;
+
+      const sorted = [...data].sort((a,b) => {
+        let av = a[brkSortKey], bv = b[brkSortKey];
+        if (typeof av === 'string') { av = parseFloat(av.replace(/[€K,%x+]/g,'')); bv = parseFloat(bv.replace(/[€K,%x+]/g,'')); }
+        return brkSortDir === 'asc' ? av - bv : bv - av;
+      });
+
+      const extraCol = brkView === 'brand' ? 'Share of Inc. Sales' : 'Volume';
+      const extraKey = brkView === 'brand' ? 'share' : 'volume';
+
+      let html = `<table style="width:100%;text-align:left;border-collapse:collapse">
+        <thead>
+          <tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+            <th class="brk-sort" data-key="name" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer">${brkView === 'brand' ? 'Brand' : 'SKU'}${sortIcon}</th>
+            <th class="brk-sort" data-key="incSales" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;text-align:right">Incr. Sales${sortIcon}</th>
+            <th class="brk-sort" data-key="roi" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;text-align:right">ROI${sortIcon}</th>
+            <th class="brk-sort" data-key="roas" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;text-align:right">ROAS${sortIcon}</th>
+            <th class="brk-sort" data-key="uplift" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;text-align:right">Sales Uplift${sortIcon}</th>
+            <th style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:right">${extraCol}</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      sorted.forEach(row => {
+        const upliftCol = row.uplift > 15 ? '#12b76a' : row.uplift > 10 ? '#0c67ff' : '#f5702a';
+        html += `<tr style="border-bottom:1px solid #f1f7f9;cursor:pointer" onmouseover="this.style.background='#f7fbfc'" onmouseout="this.style.background='transparent'" onclick="openDetail('${row.name}')">
+          <td style="padding:12px 16px">
+            <div style="font-size:14px;font-weight:500;color:#3d5761">${row.name}</div>
+            ${brkView === 'sku' ? `<div style="font-size:11px;color:#9aaab0">${row.sku}</div>` : ''}
+          </td>
+          <td style="padding:12px 16px;text-align:right;font-size:14px;font-weight:600;color:#1c3036">${row.incSales}</td>
+          <td style="padding:12px 16px;text-align:right">
+            <span style="font-size:14px;font-weight:600;color:${row.roi >= 3 ? '#12b76a' : row.roi >= 2 ? '#1c3036' : '#f5702a'}">${row.roi.toFixed(2)}x</span>
+          </td>
+          <td style="padding:12px 16px;text-align:right;font-size:14px;font-weight:500;color:#1c3036">${row.roas.toFixed(2)}x</td>
+          <td style="padding:12px 16px;text-align:right">
+            <span style="font-size:14px;font-weight:500;color:${upliftCol}">+${row.uplift}%</span>
+          </td>
+          <td style="padding:12px 16px;text-align:right;font-size:14px;color:#677b82">${brkView === 'brand' ? row.share + '%' : row.volume}</td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>
+        <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e3eaed;padding:10px 16px">
+          <span style="font-size:12px;color:#677b82">Number of rows: <strong>${sorted.length}</strong></span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:#677b82">Rows per page</span>
+            <select style="border:1px solid #e3eaed;border-radius:6px;padding:4px 24px 4px 8px;font-size:12px;color:#3d5761;outline:none"><option>10</option><option>25</option></select>
+            <button style="width:28px;height:28px;border-radius:6px;background:#1c3036;color:white;font-size:12px;font-weight:500;border:none;cursor:pointer">1</button>
+          </div>
+        </div>`;
+      document.getElementById('breakdown-table').innerHTML = html;
+
+      document.querySelectorAll('.brk-sort').forEach(th => {
+        th.addEventListener('click', () => {
+          const k = th.dataset.key;
+          if (brkSortKey === k) brkSortDir = brkSortDir === 'asc' ? 'desc' : 'asc';
+          else { brkSortKey = k; brkSortDir = 'desc'; }
+          buildBreakdownTable();
+        });
+      });
+    }
+
+    document.getElementById('breakdown-toggle').addEventListener('click', e => {
+      const btn = e.target.closest('.brk-btn');
+      if (!btn) return;
+      document.querySelectorAll('.brk-btn').forEach(b => { b.className = 'brk-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-inactive'; });
+      btn.className = 'brk-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-active';
+      brkView = btn.dataset.val;
+      brkSortKey = 'roi'; brkSortDir = 'desc';
+      buildBreakdownTable();
+    });
+
+    // =====================================================================
+    // SHOPPER PROFILE COMPARISON
+    // =====================================================================
+    function buildProfileComparison() {
+      let html = '';
+      PROFILE_DATA.forEach(row => {
+        const diffCol = row.diff.startsWith('+') ? '#12b76a' : '#f04438';
+        html += `
+          <div class="flex items-center justify-between py-2" style="border-bottom:1px solid #f1f7f9">
+            <span class="text-xs font-medium" style="color:#677b82;width:140px">${row.label}</span>
+            <div class="flex items-center gap-4">
+              <div class="text-center" style="min-width:70px">
+                <span class="text-sm font-semibold" style="color:#0c67ff">${row.exposed}</span>
+              </div>
+              <div class="text-center" style="min-width:70px">
+                <span class="text-sm" style="color:#677b82">${row.control}</span>
+              </div>
+              <span class="text-xs font-semibold" style="color:${diffCol};min-width:60px;text-align:right">${row.diff}</span>
+            </div>
+          </div>
+        `;
+      });
+
+      html = `
+        <div class="flex items-center justify-between mb-2 pb-2" style="border-bottom:1px solid #e3eaed">
+          <span class="text-xs font-medium" style="color:#475e66;width:140px">Metric</span>
+          <div class="flex items-center gap-4">
+            <span class="text-xs font-medium" style="color:#0c67ff;min-width:70px;text-align:center">Exposed</span>
+            <span class="text-xs font-medium" style="color:#677b82;min-width:70px;text-align:center">Control</span>
+            <span class="text-xs font-medium" style="color:#475e66;min-width:60px;text-align:right">Diff.</span>
+          </div>
+        </div>
+      ` + html;
+
+      document.getElementById('profile-comparison').innerHTML = html;
+    }
+
+    // =====================================================================
+    // BEHAVIOR METRICS
+    // =====================================================================
+    function buildBehaviorMetrics() {
+      let html = '';
+      BEHAVIOR_DATA.forEach(row => {
+        html += `
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium" style="color:#3d5761">${row.label}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold" style="color:#1c3036">${row.value}</span>
+                <span class="text-xs" style="color:#677b82">(${row.pct}%)</span>
+              </div>
+            </div>
+            <div style="position:relative;height:20px;background:#f1f7f9;border-radius:6px;overflow:hidden">
+              <div class="bar-anim" style="position:absolute;left:0;top:0;height:100%;width:${row.pct}%;background:${row.color};border-radius:6px;opacity:0.8;transform-origin:left"></div>
+              <div style="position:absolute;left:${parseFloat(row.benchmark)}%;top:0;height:100%;width:2px;background:#1c3036;opacity:0.3"></div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span style="font-size:10px;color:#9aaab0">0%</span>
+              <span style="font-size:10px;color:#9aaab0">Baseline: ${row.benchmark}</span>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('behavior-metrics').innerHTML = html;
+    }
+
+    // =====================================================================
+    // CLIENT FLOW
+    // =====================================================================
+    function buildClientFlow() {
+      const maxCount = Math.max(...CLIENT_FLOW.map(c => c.count));
+      let html = '<div class="flex flex-col gap-3">';
+      CLIENT_FLOW.forEach(flow => {
+        const barWidth = (flow.count / maxCount) * 100;
+        html += `
+          <div class="flex items-center gap-4">
+            <span class="text-xs font-medium" style="color:#3d5761;width:130px">${flow.label}</span>
+            <div style="flex:1;height:28px;background:#f1f7f9;border-radius:6px;overflow:hidden;position:relative">
+              <div class="bar-anim" style="height:100%;width:${barWidth}%;background:${flow.color};border-radius:6px;opacity:0.75;transform-origin:left"></div>
+            </div>
+            <div class="text-right" style="min-width:90px">
+              <span class="text-sm font-semibold" style="color:#1c3036">${flow.count.toLocaleString()}</span>
+              <span class="text-xs ml-1" style="color:#677b82">(${flow.pct}%)</span>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      document.getElementById('client-flow').innerHTML = html;
+    }
+
+    // =====================================================================
+    // DETAIL MODAL
+    // =====================================================================
+    function openDetail(name) {
+      document.getElementById('modal-title').textContent = name;
+      document.getElementById('modal-body').innerHTML = `
+        <div class="flex flex-col gap-4">
+          <div class="grid gap-3" style="grid-template-columns:repeat(3,1fr)">
+            <div class="kpi-card">
+              <p class="text-xs font-medium" style="color:#677b82">Incremental Sales</p>
+              <p class="text-lg font-bold" style="color:#1c3036">€186K</p>
+            </div>
+            <div class="kpi-card">
+              <p class="text-xs font-medium" style="color:#677b82">ROI</p>
+              <p class="text-lg font-bold" style="color:#12b76a">4.12x</p>
+            </div>
+            <div class="kpi-card">
+              <p class="text-xs font-medium" style="color:#677b82">Sales Uplift</p>
+              <p class="text-lg font-bold" style="color:#1c3036">+22.4%</p>
+            </div>
+          </div>
+          <div class="rounded-xl border p-4" style="border-color:#e3eaed">
+            <h4 class="text-xs font-semibold mb-3" style="color:#475e66">Weekly Performance</h4>
+            <svg viewBox="0 0 400 120" style="width:100%;height:auto">
+              <line x1="40" y1="10" x2="380" y2="10" stroke="#e3eaed" stroke-dasharray="3 3"/>
+              <line x1="40" y1="50" x2="380" y2="50" stroke="#e3eaed" stroke-dasharray="3 3"/>
+              <line x1="40" y1="90" x2="380" y2="90" stroke="#e3eaed" stroke-dasharray="3 3"/>
+              <polyline points="80,70 175,45 270,25 365,20" fill="none" stroke="#0c67ff" stroke-width="2.5" stroke-linejoin="round"/>
+              <circle cx="80" cy="70" r="4" fill="white" stroke="#0c67ff" stroke-width="2"/>
+              <circle cx="175" cy="45" r="4" fill="white" stroke="#0c67ff" stroke-width="2"/>
+              <circle cx="270" cy="25" r="4" fill="white" stroke="#0c67ff" stroke-width="2"/>
+              <circle cx="365" cy="20" r="4" fill="white" stroke="#0c67ff" stroke-width="2"/>
+              <text x="80" y="108" text-anchor="middle" fill="#677b82" font-size="10">W1</text>
+              <text x="175" y="108" text-anchor="middle" fill="#677b82" font-size="10">W2</text>
+              <text x="270" y="108" text-anchor="middle" fill="#677b82" font-size="10">W3</text>
+              <text x="365" y="108" text-anchor="middle" fill="#677b82" font-size="10">W4</text>
+            </svg>
+          </div>
+          <div class="rounded-xl border p-4" style="border-color:#e3eaed">
+            <h4 class="text-xs font-semibold mb-3" style="color:#475e66">Client Dynamics</h4>
+            <div class="grid gap-2" style="grid-template-columns:repeat(2,1fr)">
+              <div class="flex items-center gap-2 rounded-lg p-2" style="background:#12b76a10">
+                <div class="rounded-full" style="width:8px;height:8px;background:#12b76a"></div>
+                <span class="text-xs" style="color:#3d5761">Gained: <strong>1,840</strong></span>
+              </div>
+              <div class="flex items-center gap-2 rounded-lg p-2" style="background:#f0443810">
+                <div class="rounded-full" style="width:8px;height:8px;background:#f04438"></div>
+                <span class="text-xs" style="color:#3d5761">Lost: <strong>620</strong></span>
+              </div>
+              <div class="flex items-center gap-2 rounded-lg p-2" style="background:#0c67ff10">
+                <div class="rounded-full" style="width:8px;height:8px;background:#0c67ff"></div>
+                <span class="text-xs" style="color:#3d5761">Over-consumed: <strong>2,890</strong></span>
+              </div>
+              <div class="flex items-center gap-2 rounded-lg p-2" style="background:#f5702a10">
+                <div class="rounded-full" style="width:8px;height:8px;background:#f5702a"></div>
+                <span class="text-xs" style="color:#3d5761">Under-consumed: <strong>740</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const modal = document.getElementById('detail-modal');
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+
+    function closeDetail() {
+      const modal = document.getElementById('detail-modal');
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+
+    // =====================================================================
+    // CAMPAIGN SWITCHER
+    // =====================================================================
+    function switchCampaign(key) {
+      const c = CAMPAIGNS[key];
+      if (!c) return;
+      document.querySelector('#page-content > div:nth-child(1) p.text-xs').textContent =
+        `${c.name} \u00b7 ${c.stores} stores \u00b7 ${c.days} days running`;
+
+      const kpiCards = document.querySelectorAll('.kpi-card');
+      if (kpiCards.length >= 5) {
+        kpiCards[0].querySelector('.text-2xl').textContent = c.roi.toFixed(2) + 'x';
+        kpiCards[1].querySelector('.text-2xl').textContent = c.roas.toFixed(2) + 'x';
+        kpiCards[2].querySelector('.text-2xl').textContent = '€' + c.incSales + 'K';
+        kpiCards[3].querySelector('.text-2xl').textContent = '+' + c.uplift + '%';
+        kpiCards[4].querySelector('.text-2xl').textContent = '€' + c.spend + 'K';
+      }
+    }
+
+    // =====================================================================
+    // INITIAL RENDER
+    // =====================================================================
+    buildPerfChart();
+    buildBreakdownTable();
+    buildProfileComparison();
+    buildBehaviorMetrics();
+    buildClientFlow();
+  </script>
+</body>
+</html>

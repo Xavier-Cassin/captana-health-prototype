@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campaign Manager - Insight Analysis</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sl: {
+              50: '#f7fbfc', 100: '#f1f7f9', 200: '#e3eaed', 300: '#d0dadd',
+              400: '#9aaab0', 500: '#677b82', 600: '#475e66', 700: '#3d5761',
+              800: '#1c3036', 900: '#102126',
+            },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; background: #f7fbfc; color: #1c3036; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24' stroke='%239aaab0' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    .tab-active { background: white; color: #1c3036; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+    .tab-inactive { color: #677b82; }
+    .kpi-card { border: 1px solid #e3eaed; border-radius: 16px; padding: 20px; background: white; box-shadow: 0 0 0 4px rgba(227,234,237,0.6); }
+    .segment-bar { transition: width 0.6s ease-out; }
+    .donut-segment { transition: stroke-dashoffset 0.6s ease-out; }
+    .view-btn { cursor: pointer; transition: all 0.15s; }
+    .view-btn:hover { background: #f1f7f9; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV BAR -->
+  <header class="flex items-center justify-between border-b bg-white px-5 py-2.5" style="border-color:#e3eaed">
+    <div class="flex items-center gap-7">
+      <div class="flex items-center gap-2.5">
+        <div class="flex items-center justify-center rounded-lg text-white font-bold" style="width:32px;height:32px;background:#1c3036;font-size:11px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="12,3 22,21 2,21" fill="white"/></svg>
+        </div>
+        <span class="text-sm font-semibold" style="color:#1c3036">Campaign Manager</span>
+      </div>
+      <nav class="flex items-center gap-1">
+        <button class="rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82">Campaigns</button>
+        <button class="rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82">Media Library</button>
+        <button class="rounded-lg px-3.5 py-1.5 text-sm font-medium text-white" style="background:#1c3036">Insight Analysis</button>
+        <button class="rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82" onclick="window.location.href='prototype-performance-monitoring.html'">Performance</button>
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="rounded-lg p-1.5 hover:bg-gray-50" style="color:#9aaab0">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="rounded-full" style="width:32px;height:32px;background:#0c67ff"></div>
+    </div>
+  </header>
+
+  <!-- FILTER BAR -->
+  <div class="flex items-center justify-between bg-white px-6 py-3 border-b" style="border-color:#e3eaed">
+    <div class="flex items-center gap-3">
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Brand</span>
+        <select id="brand-select" class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:150px">
+          <option value="all">All Brands</option>
+          <option value="coca-cola">Coca-Cola</option>
+          <option value="pepsi">PepsiCo</option>
+          <option value="danone">Danone</option>
+          <option value="nestle">Nestlé</option>
+          <option value="unilever">Unilever</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Product Category</span>
+        <select class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:160px">
+          <option>All Categories</option>
+          <option>Beverages</option>
+          <option>Dairy</option>
+          <option>Snacks</option>
+          <option>Personal Care</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Retail Chain</span>
+        <select id="chain-select" class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:140px">
+          <option value="all">All Chains</option>
+          <option>Carrefour</option>
+          <option>Auchan</option>
+          <option>E.Leclerc</option>
+          <option>Intermarché</option>
+          <option>Casino</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Product Scope</span>
+        <select class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:140px">
+          <option>All Products</option>
+          <option>Coca-Cola Classic 33cl</option>
+          <option>Coca-Cola Zero 33cl</option>
+          <option>Fanta Orange 33cl</option>
+          <option>Sprite 33cl</option>
+        </select>
+      </div>
+    </div>
+    <div class="inline-flex rounded-lg p-0.5" style="background:#f1f7f9;border:1px solid #e3eaed" id="period-group">
+      <button class="period-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-inactive" data-val="4w">Last 4 weeks</button>
+      <button class="period-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-active" data-val="12w">Last 12 weeks</button>
+      <button class="period-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-inactive" data-val="ytd">Year to Date</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="mx-auto px-6 py-6" style="max-width:1200px">
+    <div class="flex flex-col gap-8 fade-in" id="page-content">
+
+      <!-- PAGE HEADER -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center rounded-xl" style="width:40px;height:40px;background:#f1f7f9">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475e66" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 21H4.6c-.56 0-.84 0-1.054-.109a1 1 0 01-.437-.437C3 20.24 3 19.96 3 19.4V3"/>
+              <path d="M7 14l4-4 4 4 6-6"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-semibold" style="color:#1c3036">Insight Analysis</h1>
+            <p class="text-xs" style="color:#677b82">Monitor brand performance and identify activation opportunities</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: SALES PERFORMANCE -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center rounded-md px-2.5 py-1 font-bold uppercase tracking-wider text-white" style="background:#0c67ff;font-size:10px;letter-spacing:0.06em">SALES</span>
+          <h2 class="text-sm font-semibold" style="color:#475e66">Sales Performance</h2>
+        </div>
+        <div class="grid gap-4" style="grid-template-columns:repeat(5,1fr)">
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Total Sales</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">€2.47M</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 8.3%</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Total Transactions</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">184,290</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 5.1%</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Average Basket Size</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">€13.40</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 3.0%</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Sales per Shopper</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">€28.60</p>
+            <div class="mt-1"><span style="color:#f04438;font-size:12px;font-weight:500">&#9660; 1.2%</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Market Share</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">14.7%</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 0.4pp</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: SALES TREND -->
+      <div class="flex flex-col gap-4">
+        <h2 class="text-base font-semibold" style="color:#1c3036">Sales Trend (last 12 weeks)</h2>
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-medium" style="color:#677b82">Indicator</span>
+            <select id="sales-indicator" class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:200px">
+              <option value="sales">Total Sales (€)</option>
+              <option value="transactions">Transactions</option>
+              <option value="basket">Average Basket (€)</option>
+              <option value="market-share">Market Share (%)</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5">
+              <div class="rounded" style="width:20px;height:3px;background:#0c67ff"></div>
+              <span class="text-xs" style="color:#677b82">Brand</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="rounded" style="width:20px;height:3px;background:#d0dadd;border:1px dashed #9aaab0"></div>
+              <span class="text-xs" style="color:#677b82">Category Avg.</span>
+            </div>
+          </div>
+        </div>
+        <div id="sales-chart"></div>
+      </div>
+
+      <!-- SECTION: RETAIL CHAIN PERFORMANCE -->
+      <div class="flex flex-col gap-4">
+        <h2 class="text-base font-semibold" style="color:#1c3036">Performance by Retail Chain</h2>
+        <div class="overflow-hidden rounded-xl border bg-white" style="border-color:#e3eaed" id="chain-table"></div>
+      </div>
+
+      <!-- SECTION: SHOPPER BEHAVIOR -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center rounded-md px-2.5 py-1 font-bold uppercase tracking-wider text-white" style="background:#7c3aed;font-size:10px;letter-spacing:0.06em">SHOPPERS</span>
+          <h2 class="text-sm font-semibold" style="color:#475e66">Shopper Behavior</h2>
+        </div>
+        <div class="grid gap-4" style="grid-template-columns:repeat(5,1fr)">
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Total Shoppers</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">86,340</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 6.2%</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Purchase Frequency</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">2.13x</p>
+            <div class="mt-1"><span style="color:#f04438;font-size:12px;font-weight:500">&#9660; 0.8%</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Avg. Spend per Visit</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">€13.40</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 3.0%</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Penetration Rate</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">23.4%</p>
+            <div class="mt-1"><span style="color:#12b76a;font-size:12px;font-weight:500">&#9650; 1.1pp</span></div>
+          </div>
+          <div class="kpi-card">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">Loyalty Index</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">0.72</p>
+            <div class="mt-1"><span style="color:#677b82;font-size:12px">&#8594; 0.0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: SHOPPER SEGMENTATION -->
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold" style="color:#1c3036">Shopper Segmentation</h2>
+          <div class="inline-flex rounded-lg p-0.5" style="background:#f1f7f9;border:1px solid #e3eaed" id="seg-view-group">
+            <button class="seg-view-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-active" data-val="frequency">By Frequency</button>
+            <button class="seg-view-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-inactive" data-val="value">By Value</button>
+            <button class="seg-view-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-inactive" data-val="lifecycle">By Lifecycle</button>
+          </div>
+        </div>
+
+        <div class="grid gap-6" style="grid-template-columns:340px 1fr">
+          <!-- Donut chart -->
+          <div class="flex flex-col items-center gap-3 rounded-2xl border bg-white p-5" style="border-color:#e3eaed">
+            <div id="donut-chart" style="position:relative;width:220px;height:220px"></div>
+            <p class="text-xs font-medium" style="color:#677b82">Shopper distribution</p>
+          </div>
+          <!-- Segment cards -->
+          <div class="grid gap-3" style="grid-template-columns:repeat(3,1fr)" id="segment-cards"></div>
+        </div>
+      </div>
+
+      <!-- SECTION: AUDIENCE ACTIVATION -->
+      <div class="rounded-2xl border bg-white p-6" style="border-color:#e3eaed;background:linear-gradient(135deg,#f6faff 0%,#f7fbfc 100%)">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center rounded-xl" style="width:48px;height:48px;background:#0c67ff">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 00-3-3.87"/>
+                <path d="M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base font-semibold" style="color:#1c3036">Build a Target Audience</h3>
+              <p class="text-sm" style="color:#677b82">Use the segments above to create a store audience for your next campaign</p>
+            </div>
+          </div>
+          <button class="rounded-lg px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90" style="background:#0c67ff" onclick="openAudienceBuilder()">
+            Create Audience
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- AUDIENCE BUILDER MODAL -->
+  <div id="audience-modal" class="hidden" style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center">
+    <div style="position:fixed;inset:0;background:rgba(16,33,38,0.5)" onclick="closeAudienceBuilder()"></div>
+    <div class="fade-in" style="position:relative;background:white;border-radius:16px;padding:32px;width:540px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-lg font-semibold" style="color:#1c3036">Create Target Audience</h2>
+        <button onclick="closeAudienceBuilder()" class="rounded-lg p-1 hover:bg-gray-50" style="color:#9aaab0">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-5">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-medium" style="color:#475e66">Audience Name</label>
+          <input type="text" placeholder="e.g. Heavy Buyers - Beverages" class="rounded-lg border px-3 py-2 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761" />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-medium" style="color:#475e66">Include Segments</label>
+          <div class="flex flex-wrap gap-2" id="modal-segments"></div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-medium" style="color:#475e66">Estimated Reach</label>
+          <div class="rounded-xl p-4" style="background:#f1f7f9">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-2xl font-bold" style="color:#1c3036" id="modal-reach">38,720</p>
+                <p class="text-xs" style="color:#677b82">shoppers across all stores</p>
+              </div>
+              <div class="text-right">
+                <p class="text-lg font-semibold" style="color:#0c67ff">44.8%</p>
+                <p class="text-xs" style="color:#677b82">of total shoppers</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          <button onclick="closeAudienceBuilder()" class="flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition hover:bg-gray-50" style="border-color:#e3eaed;color:#475e66">Cancel</button>
+          <button class="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90" style="background:#0c67ff">Create & Activate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================================================================
+    // DATA
+    // =====================================================================
+    const WEEKS = ['W01','W02','W03','W04','W05','W06','W07','W08','W09','W10','W11','W12'];
+    const SALES_DATA = {
+      sales: { label: 'Total Sales (€)', brand: [185,192,198,204,189,210,218,225,212,230,240,247], avg: [170,172,175,178,176,180,183,185,182,188,190,192], unit: '€', suffix: 'K' },
+      transactions: { label: 'Transactions', brand: [14.2,14.8,15.1,15.6,14.9,16.2,16.8,17.1,16.5,17.4,17.9,18.4], avg: [13.0,13.1,13.2,13.3,13.2,13.5,13.6,13.7,13.5,13.8,13.9,14.0], unit: '', suffix: 'K' },
+      basket: { label: 'Avg. Basket (€)', brand: [13.0,13.0,13.1,13.1,12.7,13.0,13.0,13.2,12.8,13.2,13.4,13.4], avg: [13.1,13.1,13.3,13.4,13.3,13.3,13.5,13.5,13.5,13.6,13.7,13.7], unit: '€', suffix: '' },
+      'market-share': { label: 'Market Share (%)', brand: [13.8,14.0,14.1,14.2,13.9,14.3,14.5,14.6,14.3,14.5,14.7,14.7], avg: [14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0], unit: '', suffix: '%' }
+    };
+
+    const CHAIN_DATA = [
+      { chain:'Carrefour', stores: 312, sales:'€892K', salesD:9.2, transactions:'52,140', transD:5.8, basket:'€17.12', basketD:3.2, share:'16.2%', shareD:0.6 },
+      { chain:'E.Leclerc', stores: 287, sales:'€714K', salesD:7.8, transactions:'45,680', transD:4.3, basket:'€15.63', basketD:3.4, share:'15.1%', shareD:0.3 },
+      { chain:'Auchan', stores: 198, sales:'€398K', salesD:10.1, transactions:'28,920', transD:6.9, basket:'€13.76', basketD:3.0, share:'13.8%', shareD:0.5 },
+      { chain:'Intermarché', stores: 245, sales:'€312K', salesD:6.4, transactions:'24,680', transD:3.1, basket:'€12.64', basketD:3.2, share:'12.9%', shareD:-0.2 },
+      { chain:'Casino', stores: 156, sales:'€154K', salesD:-2.1, transactions:'12,870', transD:-3.4, basket:'€11.96', basketD:1.3, share:'11.4%', shareD:-0.4 },
+    ];
+
+    const SEGMENTS = {
+      frequency: [
+        { name:'Heavy Buyers', desc:'5+ purchases / period', count:8640, pct:10.0, avgSpend:'€67.20', color:'#0c67ff', trend:'+2.1%' },
+        { name:'Regular Buyers', desc:'3-4 purchases / period', count:17280, pct:20.0, avgSpend:'€42.80', color:'#7c3aed', trend:'+1.4%' },
+        { name:'Moderate Buyers', desc:'2 purchases / period', count:22050, pct:25.5, avgSpend:'€26.60', color:'#12b76a', trend:'+0.8%' },
+        { name:'Light Buyers', desc:'1 purchase / period', count:25900, pct:30.0, avgSpend:'€13.40', color:'#f5702a', trend:'-0.3%' },
+        { name:'New Buyers', desc:'First purchase in period', count:7770, pct:9.0, avgSpend:'€11.20', color:'#1ecaf0', trend:'+4.2%' },
+        { name:'Lapsed Buyers', desc:'No purchase (prev. active)', count:4700, pct:5.5, avgSpend:'€0', color:'#f04438', trend:'+0.6%' },
+      ],
+      value: [
+        { name:'High-Value', desc:'Top 20% by spend', count:17270, pct:20.0, avgSpend:'€89.40', color:'#0c67ff', trend:'+3.2%' },
+        { name:'Mid-High Value', desc:'60th-80th percentile', count:17270, pct:20.0, avgSpend:'€45.60', color:'#7c3aed', trend:'+1.8%' },
+        { name:'Mid-Value', desc:'40th-60th percentile', count:17270, pct:20.0, avgSpend:'€28.30', color:'#12b76a', trend:'+0.5%' },
+        { name:'Mid-Low Value', desc:'20th-40th percentile', count:17270, pct:20.0, avgSpend:'€15.10', color:'#f5702a', trend:'-0.2%' },
+        { name:'Low-Value', desc:'Bottom 20% by spend', count:10800, pct:12.5, avgSpend:'€6.80', color:'#f04438', trend:'-1.1%' },
+        { name:'Dormant', desc:'No recent activity', count:6460, pct:7.5, avgSpend:'€0', color:'#9aaab0', trend:'+0.9%' },
+      ],
+      lifecycle: [
+        { name:'Loyal Advocates', desc:'High freq. + high value', count:12100, pct:14.0, avgSpend:'€78.50', color:'#0c67ff', trend:'+1.9%' },
+        { name:'Growing', desc:'Increasing purchase freq.', count:15550, pct:18.0, avgSpend:'€38.20', color:'#12b76a', trend:'+5.4%' },
+        { name:'Stable', desc:'Consistent behavior', count:24170, pct:28.0, avgSpend:'€26.90', color:'#7c3aed', trend:'+0.2%' },
+        { name:'At Risk', desc:'Declining frequency', count:16480, pct:19.1, avgSpend:'€18.40', color:'#f5702a', trend:'-2.8%' },
+        { name:'Churned', desc:'No purchase 8+ weeks', count:10370, pct:12.0, avgSpend:'€0', color:'#f04438', trend:'+1.2%' },
+        { name:'Win-Back', desc:'Reactivated shoppers', count:7670, pct:8.9, avgSpend:'€14.60', color:'#1ecaf0', trend:'+6.1%' },
+      ],
+    };
+
+    let currentSegView = 'frequency';
+    let sortKey = 'salesD', sortDir = 'desc';
+
+    // =====================================================================
+    // HELPERS
+    // =====================================================================
+    function delta(val, suffix='%') {
+      if (val === 0) return `<span style="color:#677b82;font-size:12px">&#8594; 0</span>`;
+      const pos = val > 0;
+      const col = pos ? '#12b76a' : '#f04438';
+      const arr = pos ? '&#9650;' : '&#9660;';
+      return `<span style="color:${col};font-size:12px;font-weight:500">${arr} ${Math.abs(val)}${suffix}</span>`;
+    }
+
+    // =====================================================================
+    // SALES CHART
+    // =====================================================================
+    function buildSalesChart() {
+      const indicator = document.getElementById('sales-indicator').value;
+      const d = SALES_DATA[indicator];
+      const W = 900, H = 240, PX = 55, PY = 20;
+      const allVals = [...d.brand, ...d.avg];
+      const min = Math.min(...allVals) * 0.95, max = Math.max(...allVals) * 1.05;
+      const range = max - min || 1;
+
+      function pts(data) {
+        return data.map((v,i) => ({
+          x: PX + i * ((W - PX * 2) / (data.length - 1)),
+          y: PY + (1 - (v - min) / range) * (H - PY * 2),
+        }));
+      }
+
+      const brandPts = pts(d.brand);
+      const avgPts = pts(d.avg);
+      const brandPath = brandPts.map((p,i) => `${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+      const avgPath = avgPts.map((p,i) => `${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+      const areaPath = brandPath + ` L${brandPts[brandPts.length-1].x},${H-PY} L${brandPts[0].x},${H-PY} Z`;
+
+      const yTicks = 5;
+      let gridLines = '', yLabels = '';
+      for (let i = 0; i <= yTicks; i++) {
+        const y = PY + i * ((H - PY * 2) / yTicks);
+        const val = max - i * (range / yTicks);
+        gridLines += `<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="#e3eaed" stroke-dasharray="3 3"/>`;
+        yLabels += `<text x="${PX-8}" y="${y+4}" text-anchor="end" fill="#677b82" font-size="11">${d.unit}${Math.round(val)}${d.suffix}</text>`;
+      }
+      let xLabels = '';
+      brandPts.forEach((p,i) => { xLabels += `<text x="${p.x}" y="${H-2}" text-anchor="middle" fill="#677b82" font-size="11">${WEEKS[i]}</text>`; });
+
+      document.getElementById('sales-chart').innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:280px">
+          ${gridLines}${yLabels}${xLabels}
+          <path d="${areaPath}" fill="#0c67ff" fill-opacity="0.06"/>
+          <path d="${avgPath}" fill="none" stroke="#d0dadd" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round"/>
+          <path d="${brandPath}" fill="none" stroke="#0c67ff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          ${brandPts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="white" stroke="#0c67ff" stroke-width="2"/>`).join('')}
+        </svg>
+      `;
+    }
+
+    document.getElementById('sales-indicator').addEventListener('change', buildSalesChart);
+
+    // =====================================================================
+    // CHAIN TABLE
+    // =====================================================================
+    function buildChainTable() {
+      const sortIcon = `<svg style="display:inline;vertical-align:middle;margin-left:4px" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#9aaab0" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>`;
+      const sorted = [...CHAIN_DATA].sort((a,b) => {
+        let av = a[sortKey], bv = b[sortKey];
+        if (typeof av === 'string') av = av.replace(/[€,%K]/g,'');
+        if (typeof bv === 'string') bv = bv.replace(/[€,%K]/g,'');
+        av = parseFloat(av); bv = parseFloat(bv);
+        return sortDir === 'asc' ? av - bv : bv - av;
+      });
+
+      let html = `<table style="width:100%;text-align:left;border-collapse:collapse">
+        <thead>
+          <tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+            <th class="chain-sort" data-key="chain" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer">Retail Chain${sortIcon}</th>
+            <th style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Stores</th>
+            <th class="chain-sort" data-key="salesD" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;text-align:right">Sales${sortIcon}</th>
+            <th class="chain-sort" data-key="transD" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;text-align:right">Transactions${sortIcon}</th>
+            <th class="chain-sort" data-key="basketD" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;text-align:right">Avg. Basket${sortIcon}</th>
+            <th class="chain-sort" data-key="shareD" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;text-align:right">Market Share${sortIcon}</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      sorted.forEach(row => {
+        html += `<tr style="border-bottom:1px solid #f1f7f9" onmouseover="this.style.background='#f7fbfc'" onmouseout="this.style.background='transparent'">
+          <td style="padding:12px 16px;font-size:14px;font-weight:500;color:#3d5761">${row.chain}</td>
+          <td style="padding:12px 16px;text-align:center;font-size:13px;color:#677b82">${row.stores}</td>
+          <td style="padding:12px 16px;text-align:right">
+            <div style="font-size:14px;font-weight:500;color:#1c3036">${row.sales}</div>
+            <div>${delta(row.salesD)}</div>
+          </td>
+          <td style="padding:12px 16px;text-align:right">
+            <div style="font-size:14px;font-weight:500;color:#1c3036">${row.transactions}</div>
+            <div>${delta(row.transD)}</div>
+          </td>
+          <td style="padding:12px 16px;text-align:right">
+            <div style="font-size:14px;font-weight:500;color:#1c3036">${row.basket}</div>
+            <div>${delta(row.basketD)}</div>
+          </td>
+          <td style="padding:12px 16px;text-align:right">
+            <div style="font-size:14px;font-weight:500;color:#1c3036">${row.share}</div>
+            <div>${delta(row.shareD, 'pp')}</div>
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table>
+        <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e3eaed;padding:10px 16px">
+          <span style="font-size:12px;color:#677b82">Number of rows: <strong>${sorted.length}</strong></span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:#677b82">Rows per page</span>
+            <select style="border:1px solid #e3eaed;border-radius:6px;padding:4px 24px 4px 8px;font-size:12px;color:#3d5761;outline:none"><option>10</option><option>25</option></select>
+            <button style="width:28px;height:28px;border-radius:6px;background:#1c3036;color:white;font-size:12px;font-weight:500;border:none;cursor:pointer">1</button>
+          </div>
+        </div>`;
+      document.getElementById('chain-table').innerHTML = html;
+
+      document.querySelectorAll('.chain-sort').forEach(th => {
+        th.addEventListener('click', () => {
+          const k = th.dataset.key;
+          if (sortKey === k) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+          else { sortKey = k; sortDir = 'desc'; }
+          buildChainTable();
+        });
+      });
+    }
+
+    // =====================================================================
+    // SEGMENTATION
+    // =====================================================================
+    function buildDonut(segments) {
+      const total = segments.reduce((s,seg) => s + seg.count, 0);
+      const R = 80, CX = 110, CY = 110, CIRC = 2 * Math.PI * R;
+      let offset = 0;
+      let paths = '';
+      segments.forEach(seg => {
+        const pct = seg.count / total;
+        const dash = CIRC * pct;
+        const gap = CIRC - dash;
+        paths += `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${seg.color}" stroke-width="28" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${CX} ${CY})" class="donut-segment"/>`;
+        offset += dash;
+      });
+      document.getElementById('donut-chart').innerHTML = `
+        <svg viewBox="0 0 220 220" style="width:100%;height:100%">
+          ${paths}
+          <text x="${CX}" y="${CY-6}" text-anchor="middle" fill="#1c3036" font-size="22" font-weight="700">${(total/1000).toFixed(1)}K</text>
+          <text x="${CX}" y="${CY+14}" text-anchor="middle" fill="#677b82" font-size="11">shoppers</text>
+        </svg>
+      `;
+    }
+
+    function buildSegmentCards(segments) {
+      const container = document.getElementById('segment-cards');
+      container.innerHTML = '';
+      segments.forEach(seg => {
+        const trendCol = seg.trend.startsWith('+') ? '#12b76a' : seg.trend.startsWith('-') ? '#f04438' : '#677b82';
+        container.innerHTML += `
+          <div class="rounded-2xl border bg-white p-4 flex flex-col gap-3 view-btn" style="border-color:#e3eaed">
+            <div class="flex items-center gap-2">
+              <div class="rounded-full" style="width:10px;height:10px;background:${seg.color}"></div>
+              <span class="text-sm font-medium" style="color:#1c3036">${seg.name}</span>
+            </div>
+            <p class="text-xs" style="color:#9aaab0">${seg.desc}</p>
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-lg font-bold" style="color:#1c3036">${(seg.count/1000).toFixed(1)}K</p>
+                <p style="font-size:11px;color:#677b82">${seg.pct}% of total</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-semibold" style="color:#1c3036">${seg.avgSpend}</p>
+                <p style="font-size:11px;color:${trendCol}">${seg.trend}</p>
+              </div>
+            </div>
+            <div class="rounded-full" style="height:4px;background:#f1f7f9;overflow:hidden">
+              <div class="segment-bar rounded-full" style="height:100%;width:${seg.pct}%;background:${seg.color}"></div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderSegmentation() {
+      const segs = SEGMENTS[currentSegView];
+      buildDonut(segs);
+      buildSegmentCards(segs);
+    }
+
+    document.getElementById('seg-view-group').addEventListener('click', e => {
+      const btn = e.target.closest('.seg-view-btn');
+      if (!btn) return;
+      document.querySelectorAll('.seg-view-btn').forEach(b => { b.className = 'seg-view-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-inactive'; });
+      btn.className = 'seg-view-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-active';
+      currentSegView = btn.dataset.val;
+      renderSegmentation();
+    });
+
+    // =====================================================================
+    // AUDIENCE MODAL
+    // =====================================================================
+    function openAudienceBuilder() {
+      const modal = document.getElementById('audience-modal');
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+
+      const segs = SEGMENTS[currentSegView];
+      const container = document.getElementById('modal-segments');
+      container.innerHTML = '';
+      segs.forEach((seg, i) => {
+        const checked = i < 3 ? 'checked' : '';
+        container.innerHTML += `
+          <label class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition hover:bg-gray-50" style="border-color:#e3eaed">
+            <input type="checkbox" ${checked} class="seg-check" data-count="${seg.count}" style="accent-color:#0c67ff" onchange="updateReach()"/>
+            <div class="rounded-full" style="width:8px;height:8px;background:${seg.color}"></div>
+            <span class="text-xs font-medium" style="color:#3d5761">${seg.name}</span>
+          </label>
+        `;
+      });
+      updateReach();
+    }
+
+    function closeAudienceBuilder() {
+      const modal = document.getElementById('audience-modal');
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+
+    function updateReach() {
+      let total = 0;
+      document.querySelectorAll('.seg-check').forEach(cb => {
+        if (cb.checked) total += parseInt(cb.dataset.count);
+      });
+      document.getElementById('modal-reach').textContent = total.toLocaleString('en');
+    }
+
+    // =====================================================================
+    // PERIOD TOGGLE
+    // =====================================================================
+    document.getElementById('period-group').addEventListener('click', e => {
+      const btn = e.target.closest('.period-btn');
+      if (!btn) return;
+      document.querySelectorAll('.period-btn').forEach(b => { b.className = 'period-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-inactive'; });
+      btn.className = 'period-btn rounded-md px-3 py-1.5 text-xs font-medium transition tab-active';
+    });
+
+    // =====================================================================
+    // INITIAL RENDER
+    // =====================================================================
+    buildSalesChart();
+    buildChainTable();
+    renderSegmentation();
+  </script>
+</body>
+</html>

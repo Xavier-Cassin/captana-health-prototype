@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VisionLive - Parallel Compliance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sl: {
+              50: '#f7fbfc', 100: '#f1f7f9', 200: '#e3eaed', 300: '#d0dadd',
+              400: '#9aaab0', 500: '#677b82', 600: '#475e66', 700: '#3d5761',
+              800: '#1c3036', 900: '#102126',
+            },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; background: #f7fbfc; color: #1c3036; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24' stroke='%239aaab0' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV BAR -->
+  <header class="flex items-center justify-between border-b bg-white px-5 py-2.5" style="border-color:#e3eaed">
+    <div class="flex items-center gap-7">
+      <div class="flex items-center gap-2.5">
+        <div class="flex items-center justify-center rounded-lg text-white font-bold" style="width:32px;height:32px;background:#1c3036;font-size:11px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="12,3 22,21 2,21" fill="white"/></svg>
+        </div>
+        <span class="text-sm font-semibold" style="color:#1c3036">VisionLive</span>
+      </div>
+      <nav class="flex items-center gap-1">
+        <button class="rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82">Home</button>
+        <button class="rounded-lg px-3.5 py-1.5 text-sm font-medium text-white" style="background:#1c3036">Analytics</button>
+        <button class="rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82">Actions</button>
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="rounded-lg p-1.5 hover:bg-gray-50" style="color:#9aaab0">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="rounded-full" style="width:32px;height:32px;background:#0c67ff"></div>
+    </div>
+  </header>
+
+  <!-- FILTER BAR -->
+  <div class="flex items-center justify-between bg-white px-6 py-3 border-b" style="border-color:#e3eaed">
+    <div class="flex items-center gap-3">
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Retail Chain</span>
+        <select id="chain-select" class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:150px">
+          <option value="all">All Chains</option>
+          <option value="carrefour">Carrefour</option>
+          <option value="auchan">Auchan</option>
+          <option value="leclerc">E.Leclerc</option>
+          <option value="intermarche">Intermarché</option>
+          <option value="casino">Casino</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Store</span>
+        <select id="store-select" class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:160px">
+          <option value="all">All Stores</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Level</span>
+        <select class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:100px">
+          <option>Level 3</option><option>Level 2</option><option>Level 1</option>
+        </select>
+      </div>
+    </div>
+    <div class="inline-flex rounded-lg p-0.5" style="background:#f1f7f9;border:1px solid #e3eaed" id="period-group">
+      <button class="period-btn rounded-md px-3 py-1.5 text-xs font-medium transition" data-val="24h" style="color:#677b82">Last 24 hours</button>
+      <button class="period-btn rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition" data-val="7d" style="background:white;color:#1c3036">Last 7 days</button>
+      <button class="period-btn rounded-md px-3 py-1.5 text-xs font-medium transition" data-val="30d" style="color:#677b82">Last 30 days</button>
+    </div>
+  </div>
+
+  <!-- SCOPE BANNER (shows when aggregated) -->
+  <div id="scope-banner" class="hidden bg-white border-b px-6 py-2" style="border-color:#e3eaed">
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="mx-auto px-6 py-6" style="max-width:1200px">
+    <div class="flex flex-col gap-8" id="page-content"></div>
+  </main>
+
+  <script>
+    // =====================================================================
+    // STORES DATA
+    // =====================================================================
+    const CHAINS = {
+      carrefour: { label: 'Carrefour', stores: ['Carrefour Montesson','Carrefour Vélizy','Carrefour La Défense','Carrefour Créteil'] },
+      auchan:    { label: 'Auchan', stores: ['Auchan Vélizy','Auchan Boulogne','Auchan Val de Fontenay'] },
+      leclerc:   { label: 'E.Leclerc', stores: ['E.Leclerc Conflans','E.Leclerc Orgeval','E.Leclerc Plaisir'] },
+      intermarche:{ label: 'Intermarché', stores: ['Intermarché Chatou','Intermarché Sartrouville'] },
+      casino:    { label: 'Casino', stores: ['Casino Rueil','Casino Nanterre','Casino Puteaux'] },
+    };
+    let selectedChain = 'all';
+    let selectedStore = 'all';
+
+    function getStoreCount() {
+      if (selectedStore !== 'all') return 1;
+      if (selectedChain !== 'all') return CHAINS[selectedChain].stores.length;
+      return Object.values(CHAINS).reduce((s,c) => s + c.stores.length, 0);
+    }
+
+    function getScopeLabel() {
+      if (selectedStore !== 'all') return selectedStore;
+      if (selectedChain !== 'all') return CHAINS[selectedChain].label + ' (' + CHAINS[selectedChain].stores.length + ' stores)';
+      return 'All Chains (' + getStoreCount() + ' stores)';
+    }
+
+    function multiplier() {
+      const n = getStoreCount();
+      return n === 1 ? 1 : n * 0.85;
+    }
+
+    // =====================================================================
+    // DATA
+    // =====================================================================
+    const M = {
+      'out-of-shelf': {
+        label: 'Out-of-Shelf', color: '#f04438', chartColor: '#3d5761',
+        icon: '<path d="M3 5h18M3 10h18M3 15h18M3 20h18" stroke-linecap="round"/>',
+        hasShelfStore: true,
+        kpis: {
+          shelf: { rateLabel:'Out-of-shelf rate (Shelf)', rate:0.06, c2Label:'Nb. of OOS products (Shelf)', c2Val:'1,112 / 6,739', c2Num:1112, c2Tot:6739, c2D:-199, c3Label:'Average breach duration in hours (Shelf)', c3Val:'5', c3D:0 },
+          store: { rateLabel:'Out-of-shelf rate (Store)', rate:0.01, c2Label:'Nb. of OOS products (Store)', c2Val:'190 / 6,739', c2Num:190, c2Tot:6739, c2D:-93, c3Label:'Average breach duration in hours (Store)', c3Val:'5', c3D:0 },
+        },
+        topTitle: 'Highest out-of-shelf rate (Shelf)',
+        topCards: [
+          {n:'ULTRA FRAIS',p:726,r:0.10,ic:66,il:'OOS products'},
+          {n:'CONSERVES ET PLATS CUISINES',p:993,r:0.08,ic:80,il:'OOS products'},
+          {n:'CONFISERIE',p:577,r:0.08,ic:63,il:'OOS products'},
+          {n:'DESSERTS, AIDE PATISSERIE, DIE',p:894,r:0.07,ic:77,il:'OOS products'},
+          {n:'POTS POUR PETITS DEJEUNERS',p:799,r:0.06,ic:125,il:'OOS products'},
+          {n:'POTAGES, PATES, FECULENTS & AU',p:861,r:0.05,ic:59,il:'OOS products'},
+        ],
+        trendOpts: [{v:'oos-products',l:'Nb. of OOS products'},{v:'oos-rate',l:'Out-of-shelf rate'},{v:'breach',l:'Avg. breach duration'}],
+        trend: [28,18,20,24,25,16,20,28],
+        brkTitle: 'Out-of-shelf breakdown by Level 3',
+        brkCols: ['Level 3','Out-of-shelf rate','OOS products','OOS duration'],
+        brk: [
+          {l:'CONSERVES ET PLATS CUISINES',r:0.08,c2:80,e2:9,c3:1854.4,e3:-26},
+          {l:'POTS POUR PETITS DEJEUNERS',r:0.06,c2:125,e2:15,c3:1922.2,e3:-3},
+          {l:'CONFISERIE',r:0.08,c2:63,e2:7,c3:1254.4,e3:5},
+          {l:'POTAGES, PATES, FECULENTS & AU',r:0.05,c2:59,e2:-31,c3:1206.2,e3:16},
+          {l:'DESSERTS, AIDE PATISSERIE, DIE',r:0.07,c2:77,e2:13,c3:1168.9,e3:-37},
+          {l:'ULTRA FRAIS',r:0.10,c2:96,e2:46,c3:1067.8,e3:-43},
+          {l:'CONDIMENTS ET ASSAISONNEMENT',r:0.05,c2:67,e2:19,c3:925.6,e3:19},
+          {l:'BIERES ET CIDRES',r:0.11,c2:60,e2:-50,c3:921.4,e3:91},
+          {l:'FROMAGES',r:0.06,c2:85,e2:35,c3:734.6,e3:-29},
+          {l:'SOFTS DRINKS',r:0.09,c2:71,e2:3,c3:724.0,e3:12},
+        ],
+      },
+      assortment: {
+        label: 'Assortment Compliance', color: '#0c67ff', chartColor: '#0c67ff',
+        icon: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+        hasShelfStore: false,
+        kpis: {
+          single: { rateLabel:'Assortment compliance rate', rate:0.87, c2Label:'Nb. of compliant products', c2Val:'5,862 / 6,739', c2Num:5862, c2Tot:6739, c2D:124, c3Label:'Nb. of missing products', c3Val:'877', c3Num:877, c3D:-52 },
+        },
+        topTitle: 'Lowest assortment compliance',
+        topCards: [
+          {n:'BIERES ET CIDRES',p:645,r:0.78,ic:142,il:'missing products'},
+          {n:'SOFTS DRINKS',p:712,r:0.81,ic:135,il:'missing products'},
+          {n:'ULTRA FRAIS',p:726,r:0.83,ic:123,il:'missing products'},
+          {n:'CONFISERIE',p:577,r:0.84,ic:92,il:'missing products'},
+          {n:'CONDIMENTS ET ASSAISONNEMENT',p:834,r:0.85,ic:125,il:'missing products'},
+          {n:'FROMAGES',p:687,r:0.86,ic:96,il:'missing products'},
+        ],
+        trendOpts: [{v:'comp-rate',l:'Assortment compliance rate'},{v:'comp-prod',l:'Nb. of compliant products'},{v:'miss-prod',l:'Nb. of missing products'}],
+        trend: [84,85,86,85,87,88,87,87],
+        brkTitle: 'Assortment compliance breakdown by Level 3',
+        brkCols: ['Level 3','Compliance rate','Compliant products','Missing products'],
+        brk: [
+          {l:'CONSERVES ET PLATS CUISINES',r:0.91,c2:904,e2:12,c3:89,e3:-8},
+          {l:'POTS POUR PETITS DEJEUNERS',r:0.89,c2:711,e2:18,c3:88,e3:-5},
+          {l:'CONFISERIE',r:0.84,c2:485,e2:7,c3:92,e3:3},
+          {l:'POTAGES, PATES, FECULENTS & AU',r:0.88,c2:758,e2:-4,c3:103,e3:11},
+          {l:'DESSERTS, AIDE PATISSERIE, DIE',r:0.86,c2:769,e2:22,c3:125,e3:-14},
+          {l:'ULTRA FRAIS',r:0.83,c2:603,e2:31,c3:123,e3:-19},
+          {l:'CONDIMENTS ET ASSAISONNEMENT',r:0.85,c2:709,e2:9,c3:125,e3:6},
+          {l:'BIERES ET CIDRES',r:0.78,c2:503,e2:-15,c3:142,e3:24},
+          {l:'FROMAGES',r:0.86,c2:591,e2:14,c3:96,e3:-7},
+          {l:'SOFTS DRINKS',r:0.81,c2:577,e2:5,c3:135,e3:10},
+        ],
+      },
+      planogram: {
+        label: 'Planogram Compliance', color: '#12b76a', chartColor: '#12b76a',
+        icon: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>',
+        hasShelfStore: false,
+        kpis: {
+          single: { rateLabel:'Planogram compliance rate', rate:0.79, c2Label:'Nb. of compliant positions', c2Val:'4,218 / 5,340', c2Num:4218, c2Tot:5340, c2D:89, c3Label:'Nb. of misplaced products', c3Val:'1,122', c3Num:1122, c3D:-34 },
+        },
+        topTitle: 'Lowest planogram compliance',
+        topCards: [
+          {n:'SOFTS DRINKS',p:534,r:0.68,ic:171,il:'misplaced products'},
+          {n:'BIERES ET CIDRES',p:489,r:0.71,ic:142,il:'misplaced products'},
+          {n:'ULTRA FRAIS',p:612,r:0.73,ic:165,il:'misplaced products'},
+          {n:'CONDIMENTS ET ASSAISONNEMENT',p:567,r:0.75,ic:142,il:'misplaced products'},
+          {n:'CONFISERIE',p:445,r:0.76,ic:107,il:'misplaced products'},
+          {n:'FROMAGES',p:521,r:0.77,ic:120,il:'misplaced products'},
+        ],
+        trendOpts: [{v:'comp-rate',l:'Planogram compliance rate'},{v:'comp-pos',l:'Nb. of compliant positions'},{v:'mispl',l:'Nb. of misplaced products'}],
+        trend: [76,77,78,77,79,80,79,79],
+        brkTitle: 'Planogram compliance breakdown by Level 3',
+        brkCols: ['Level 3','Compliance rate','Compliant positions','Misplaced products'],
+        brk: [
+          {l:'CONSERVES ET PLATS CUISINES',r:0.83,c2:621,e2:8,c3:127,e3:-12},
+          {l:'POTS POUR PETITS DEJEUNERS',r:0.81,c2:534,e2:14,c3:125,e3:-9},
+          {l:'CONFISERIE',r:0.76,c2:338,e2:5,c3:107,e3:7},
+          {l:'POTAGES, PATES, FECULENTS & AU',r:0.80,c2:489,e2:-6,c3:122,e3:15},
+          {l:'DESSERTS, AIDE PATISSERIE, DIE',r:0.78,c2:512,e2:17,c3:144,e3:-18},
+          {l:'ULTRA FRAIS',r:0.73,c2:447,e2:24,c3:165,e3:-22},
+          {l:'CONDIMENTS ET ASSAISONNEMENT',r:0.75,c2:425,e2:6,c3:142,e3:9},
+          {l:'BIERES ET CIDRES',r:0.71,c2:347,e2:-12,c3:142,e3:28},
+          {l:'FROMAGES',r:0.77,c2:401,e2:10,c3:120,e3:-9},
+          {l:'SOFTS DRINKS',r:0.68,c2:363,e2:3,c3:171,e3:14},
+        ],
+      },
+    };
+
+    const DATES = ['24/02/2026','25/02/2026','26/02/2026','27/02/2026','28/02/2026','01/03/2026','02/03/2026','03/03/2026'];
+    let active = 'out-of-shelf';
+    let sortKey = 'c3', sortDir = 'desc';
+
+    // =====================================================================
+    // HELPERS
+    // =====================================================================
+    function h(tag, attrs, ...children) {
+      const el = document.createElement(tag);
+      if (attrs) Object.entries(attrs).forEach(([k,v]) => {
+        if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+        else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+        else if (k === 'className') el.className = v;
+        else if (k === 'innerHTML') el.innerHTML = v;
+        else el.setAttribute(k, v);
+      });
+      children.flat(Infinity).forEach(c => {
+        if (c == null) return;
+        el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      });
+      return el;
+    }
+
+    function delta(val, invert) {
+      if (val === 0) return '<span style="color:#677b82;font-size:12px">&#8594; 0</span>';
+      const pos = val > 0;
+      const good = invert ? !pos : pos;
+      const col = good ? '#12b76a' : '#f04438';
+      const arr = pos ? '&#9650;' : '&#9660;';
+      return `<span style="color:${col};font-size:12px;font-weight:500">${arr} ${Math.abs(val)}</span>`;
+    }
+
+    function fmtNum(v) {
+      if (typeof v === 'number' && v % 1 !== 0) return v.toLocaleString('en',{minimumFractionDigits:1,maximumFractionDigits:1});
+      return v.toLocaleString('en');
+    }
+
+    function scaleVal(v) { return Math.round(v * multiplier()); }
+
+    // =====================================================================
+    // STORE FILTER LOGIC
+    // =====================================================================
+    function updateStoreDropdown() {
+      const sel = document.getElementById('store-select');
+      sel.innerHTML = '<option value="all">All Stores</option>';
+      if (selectedChain === 'all') {
+        Object.values(CHAINS).forEach(chain => {
+          chain.stores.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+        });
+      } else {
+        CHAINS[selectedChain].stores.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+      }
+      sel.value = selectedStore;
+      if (!sel.querySelector(`option[value="${selectedStore}"]`)) { selectedStore = 'all'; sel.value = 'all'; }
+    }
+
+    function updateScopeBanner() {
+      const banner = document.getElementById('scope-banner');
+      const count = getStoreCount();
+      const isAgg = count > 1;
+      if (isAgg) {
+        banner.className = 'flex items-center gap-3 bg-white border-b px-6 py-2';
+        banner.style.borderColor = '#e3eaed';
+        const chainLabel = selectedChain === 'all' ? 'All Chains' : CHAINS[selectedChain].label;
+        banner.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0c67ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M9 22V12h6v10"/></svg>
+          <span style="font-size:13px;color:#1c3036;font-weight:500">${chainLabel}</span>
+          <span style="font-size:12px;color:#677b82">&#8226; Aggregated across <strong>${count}</strong> stores</span>
+        `;
+      } else {
+        banner.className = 'hidden';
+        banner.innerHTML = '';
+      }
+    }
+
+    document.getElementById('chain-select').addEventListener('change', e => {
+      selectedChain = e.target.value;
+      selectedStore = 'all';
+      updateStoreDropdown();
+      updateScopeBanner();
+      render();
+    });
+    document.getElementById('store-select').addEventListener('change', e => {
+      selectedStore = e.target.value;
+      updateScopeBanner();
+      render();
+    });
+
+    // =====================================================================
+    // SVG CHART
+    // =====================================================================
+    function buildChart(data, color) {
+      const mult = multiplier();
+      const scaled = data.map(v => Math.round(v * mult));
+      const W = 900, H = 240, PX = 50, PY = 20;
+      const min = Math.min(...scaled) - 2, max = Math.max(...scaled) + 2;
+      const range = max - min || 1;
+      const pts = scaled.map((v,i) => ({
+        x: PX + i * ((W - PX * 2) / (scaled.length - 1)),
+        y: PY + (1 - (v - min) / range) * (H - PY * 2),
+      }));
+      const linePath = pts.map((p,i) => `${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+      const areaPath = linePath + ` L${pts[pts.length-1].x},${H-PY} L${pts[0].x},${H-PY} Z`;
+
+      const yTicks = 5;
+      let gridLines = '', yLabels = '';
+      for (let i = 0; i <= yTicks; i++) {
+        const y = PY + i * ((H - PY * 2) / yTicks);
+        const val = max - i * (range / yTicks);
+        gridLines += `<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="#e3eaed" stroke-dasharray="3 3"/>`;
+        yLabels += `<text x="${PX-8}" y="${y+4}" text-anchor="end" fill="#677b82" font-size="11">${Math.round(val)}</text>`;
+      }
+      let xLabels = '';
+      pts.forEach((p,i) => { xLabels += `<text x="${p.x}" y="${H-2}" text-anchor="middle" fill="#677b82" font-size="11">${DATES[i]}</text>`; });
+
+      return `
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:280px">
+          ${gridLines}${yLabels}${xLabels}
+          <path d="${areaPath}" fill="${color}" fill-opacity="0.08"/>
+          <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          ${pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="white" stroke="${color}" stroke-width="2"/>`).join('')}
+        </svg>
+      `;
+    }
+
+    // =====================================================================
+    // RENDER
+    // =====================================================================
+    function render() {
+      const m = M[active];
+      const isComp = active !== 'out-of-shelf';
+      const el = document.getElementById('page-content');
+      el.innerHTML = '';
+      el.className = 'flex flex-col gap-8 fade-in';
+      const mult = multiplier();
+      const isAgg = getStoreCount() > 1;
+
+      // --- Section header + metric switcher ---
+      const header = h('div', {className:'flex flex-col gap-4'});
+      header.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center rounded-xl" style="width:40px;height:40px;background:#f1f7f9">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475e66" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${m.icon}</svg>
+          </div>
+          <h1 class="text-xl font-semibold" style="color:#1c3036">Parallel Compliance</h1>
+        </div>
+      `;
+      const toggle = h('div', {className:'inline-flex rounded-lg p-0.5', style:{background:'#f1f7f9',border:'1px solid #e3eaed'}});
+      ['out-of-shelf','assortment','planogram'].forEach(k => {
+        const labels = {'out-of-shelf':'% Out-of-Shelf','assortment':'% Assortment Compliance','planogram':'% Planogram Compliance'};
+        const btn = h('button', {
+          className: `rounded-md px-4 py-2 text-xs font-medium transition ${k===active ? 'shadow-sm' : ''}`,
+          style: k===active ? {background:'white',color:'#1c3036'} : {color:'#677b82'},
+          onClick: () => { active = k; sortKey = 'c3'; sortDir = 'desc'; render(); }
+        }, labels[k]);
+        toggle.appendChild(btn);
+      });
+      header.appendChild(toggle);
+      el.appendChild(header);
+
+      // --- KPIs ---
+      const kpiSection = h('div', {className:'flex flex-col gap-3'});
+      kpiSection.appendChild(h('h2', {className:'text-sm font-semibold', style:{color:'#475e66'}}, 'KPIs'));
+      const kpiRows = h('div', {className:'flex flex-col gap-3'});
+
+      if (m.hasShelfStore) {
+        // Out-of-Shelf: keep Shelf/Store split
+        [['SHELF','#12b76a',m.kpis.shelf],['STORE','#f5702a',m.kpis.store]].forEach(([scope,bc,kpi]) => {
+          const scaledC2 = scaleVal(kpi.c2Num);
+          const scaledTot = scaleVal(kpi.c2Tot);
+          const c2Display = isAgg ? `${fmtNum(scaledC2)} / ${fmtNum(scaledTot)}` : kpi.c2Val;
+          const row = h('div', {className:'grid items-center gap-4', style:{gridTemplateColumns:'auto 1fr 1fr 1fr'}});
+          row.innerHTML = `
+            <span class="inline-flex items-center rounded-md px-2.5 py-1 font-bold uppercase tracking-wider text-white" style="background:${bc};font-size:10px;letter-spacing:0.06em">${scope}</span>
+            <div class="rounded-2xl border p-4" style="border-color:#e3eaed;box-shadow:0 0 0 4px rgba(227,234,237,0.6)">
+              <p class="mb-1 text-xs font-medium" style="color:#677b82">${kpi.rateLabel}</p>
+              <p class="text-2xl font-bold" style="color:#1c3036">${(kpi.rate*100).toFixed(2)}%</p>
+            </div>
+            <div class="rounded-2xl border p-4" style="border-color:#e3eaed;box-shadow:0 0 0 4px rgba(227,234,237,0.6)">
+              <p class="mb-1 text-xs font-medium" style="color:#677b82">${kpi.c2Label}</p>
+              <div class="flex items-center gap-2">
+                <span class="text-lg font-semibold" style="color:#1c3036">${c2Display}</span>
+                ${delta(kpi.c2D, true)}
+              </div>
+            </div>
+            <div class="rounded-2xl border p-4" style="border-color:#e3eaed;box-shadow:0 0 0 4px rgba(227,234,237,0.6)">
+              <p class="mb-1 text-xs font-medium" style="color:#677b82">${kpi.c3Label}</p>
+              <div class="flex items-center gap-2">
+                <span class="text-lg font-semibold" style="color:#1c3036">${kpi.c3Val}</span>
+                ${delta(kpi.c3D, true)}
+              </div>
+            </div>
+          `;
+          kpiRows.appendChild(row);
+        });
+      } else {
+        // Assortment / Planogram: single row, no badge, 3 equal KPI cards
+        const kpi = m.kpis.single;
+        const scaledC2 = scaleVal(kpi.c2Num);
+        const scaledTot = scaleVal(kpi.c2Tot);
+        const scaledC3 = scaleVal(kpi.c3Num);
+        const c2Display = isAgg ? `${fmtNum(scaledC2)} / ${fmtNum(scaledTot)}` : kpi.c2Val;
+        const c3Display = isAgg ? fmtNum(scaledC3) : kpi.c3Val;
+        const row = h('div', {className:'grid items-center gap-4', style:{gridTemplateColumns:'1fr 1fr 1fr'}});
+        row.innerHTML = `
+          <div class="rounded-2xl border p-4" style="border-color:#e3eaed;box-shadow:0 0 0 4px rgba(227,234,237,0.6)">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">${kpi.rateLabel}</p>
+            <p class="text-2xl font-bold" style="color:#1c3036">${(kpi.rate*100).toFixed(2)}%</p>
+          </div>
+          <div class="rounded-2xl border p-4" style="border-color:#e3eaed;box-shadow:0 0 0 4px rgba(227,234,237,0.6)">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">${kpi.c2Label}</p>
+            <div class="flex items-center gap-2">
+              <span class="text-lg font-semibold" style="color:#1c3036">${c2Display}</span>
+              ${delta(kpi.c2D, false)}
+            </div>
+          </div>
+          <div class="rounded-2xl border p-4" style="border-color:#e3eaed;box-shadow:0 0 0 4px rgba(227,234,237,0.6)">
+            <p class="mb-1 text-xs font-medium" style="color:#677b82">${kpi.c3Label}</p>
+            <div class="flex items-center gap-2">
+              <span class="text-lg font-semibold" style="color:#1c3036">${c3Display}</span>
+              ${delta(kpi.c3D, false)}
+            </div>
+          </div>
+        `;
+        kpiRows.appendChild(row);
+      }
+
+      kpiSection.appendChild(kpiRows);
+      el.appendChild(kpiSection);
+
+      // --- Top categories ---
+      const topSection = h('div', {className:'flex flex-col gap-3'});
+      topSection.appendChild(h('h2', {className:'text-sm font-semibold', style:{color:'#475e66'}}, m.topTitle));
+      const topRow = h('div', {className:'flex gap-3 overflow-x-auto pb-2 scrollbar-hide'});
+      m.topCards.forEach(c => {
+        const scaledIc = scaleVal(c.ic);
+        const card = h('div', {className:'flex flex-col items-center gap-2 rounded-2xl border bg-white p-4 text-center shadow-sm', style:{borderColor:'#e3eaed',minWidth:'155px'}});
+        card.innerHTML = `
+          <div class="flex items-center justify-center rounded-xl" style="width:48px;height:48px;background:#f1f7f9">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#677b82" stroke-width="1.5" stroke-linecap="round"><path d="M3 5h18M3 10h18M3 15h18M3 20h18"/></svg>
+          </div>
+          <div>
+            <p class="text-xs font-medium leading-tight" style="color:#3d5761;max-width:130px">${c.n}</p>
+            <p style="font-size:10px;color:#9aaab0">${scaleVal(c.p)} products</p>
+          </div>
+          <p class="text-lg font-bold" style="color:${m.color}">${(c.r*100).toFixed(2)}%</p>
+          <p style="font-size:10px;color:${m.color}">(${fmtNum(scaledIc)} ${c.il})</p>
+          <button class="flex items-center gap-1 hover:opacity-80 transition" style="font-size:11px;font-weight:500;color:#677b82">
+            <span>Learn more</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        `;
+        topRow.appendChild(card);
+      });
+      topSection.appendChild(topRow);
+      el.appendChild(topSection);
+
+      // --- Trend chart ---
+      const trendSection = h('div', {className:'flex flex-col gap-4'});
+      trendSection.appendChild(h('h2', {className:'text-base font-semibold', style:{color:'#1c3036'}}, 'Trend (last 7 days)'));
+      const trendControls = h('div', {className:'flex items-center justify-between flex-wrap gap-3'});
+      trendControls.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-medium" style="color:#677b82">Indicator</span>
+          <select class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:200px">
+            ${m.trendOpts.map(o => `<option value="${o.v}">${o.l}</option>`).join('')}
+          </select>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <div class="rounded" style="width:20px;height:3px;background:${m.chartColor}"></div>
+            <span class="text-xs" style="color:#677b82">Level 3</span>
+          </div>
+          <select class="rounded-lg border px-3 py-1.5 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:160px">
+            <option>SOFTS DRINKS</option>
+          </select>
+        </div>
+      `;
+      trendSection.appendChild(trendControls);
+      trendSection.appendChild(h('div', {innerHTML: buildChart(m.trend, m.chartColor)}));
+      el.appendChild(trendSection);
+
+      // --- Breakdown table ---
+      const tblSection = h('div', {className:'flex flex-col gap-4'});
+      tblSection.appendChild(h('h2', {className:'text-base font-semibold', style:{color:'#1c3036'}}, m.brkTitle));
+
+      const sorted = [...m.brk].sort((a,b) => {
+        let av = sortKey==='l'?a.l:sortKey==='r'?a.r:sortKey==='c2'?a.c2:a.c3;
+        let bv = sortKey==='l'?b.l:sortKey==='r'?b.r:sortKey==='c2'?b.c2:b.c3;
+        if (av<bv) return sortDir==='asc'?-1:1;
+        if (av>bv) return sortDir==='asc'?1:-1;
+        return 0;
+      });
+
+      const sortIcon = `<svg style="display:inline;vertical-align:middle;margin-left:4px" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#9aaab0" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>`;
+      const colKeys = ['l','r','c2','c3'];
+      const showShelfGroup = m.hasShelfStore;
+      const tblWrap = h('div', {className:'overflow-hidden rounded-xl border bg-white', style:{borderColor:'#e3eaed'}});
+      let tblHTML = `<table style="width:100%;text-align:left;border-collapse:collapse">
+        <thead>
+          ${showShelfGroup ? `<tr style="border-bottom:1px solid #f1f7f9;background:#f7fbfc">
+            <th style="padding:8px 16px" colspan="2"></th>
+            <th style="padding:8px 16px;text-align:center;font-size:12px;font-weight:600;color:#677b82" colspan="2">Shelf</th>
+          </tr>` : ''}
+          <tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+            ${m.brkCols.map((col,i) => `<th class="sort-col" data-key="${colKeys[i]}" style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;cursor:pointer;user-select:none">${col}${sortIcon}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>`;
+      sorted.forEach(row => {
+        const sc2 = scaleVal(row.c2);
+        const sc3 = Math.round(row.c3 * mult * 10) / 10;
+        const e2col = row.e2>0?'#12b76a':row.e2<0?'#f04438':'#677b82';
+        const e2arr = row.e2>0?'&#9650;':row.e2<0?'&#9660;':'';
+        const e3col = row.e3>0?'#12b76a':row.e3<0?'#f04438':'#677b82';
+        const e3arr = row.e3>0?'&#9650;':row.e3<0?'&#9660;':'';
+        tblHTML += `<tr style="border-bottom:1px solid #f1f7f9" onmouseover="this.style.background='#f7fbfc'" onmouseout="this.style.background='transparent'">
+          <td style="padding:12px 16px;font-size:14px;font-weight:500;color:#3d5761">${row.l}</td>
+          <td style="padding:12px 16px;text-align:center;font-size:14px;font-weight:600;color:#1c3036">${(row.r*100).toFixed(2)}%</td>
+          <td style="padding:12px 16px;text-align:right">
+            <div style="font-size:14px;font-weight:500;color:#1c3036">${fmtNum(sc2)}</div>
+            <div style="font-size:11px;color:${e2col}">${e2arr} ${Math.abs(row.e2)}%</div>
+          </td>
+          <td style="padding:12px 16px;text-align:right">
+            <div style="font-size:14px;font-weight:500;color:#1c3036">${fmtNum(sc3)}</div>
+            <div style="font-size:11px;color:${e3col}">${e3arr} ${Math.abs(row.e3)}%</div>
+          </td>
+        </tr>`;
+      });
+      tblHTML += `</tbody></table>
+        <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e3eaed;padding:10px 16px">
+          <span style="font-size:12px;color:#677b82">Number of rows: <strong>${sorted.length}</strong></span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:#677b82">Rows per page</span>
+            <select style="border:1px solid #e3eaed;border-radius:6px;padding:4px 24px 4px 8px;font-size:12px;color:#3d5761;outline:none"><option>10</option><option>25</option></select>
+            <button style="width:28px;height:28px;border-radius:6px;background:#1c3036;color:white;font-size:12px;font-weight:500;border:none;cursor:pointer">1</button>
+          </div>
+        </div>`;
+      tblWrap.innerHTML = tblHTML;
+      tblSection.appendChild(tblWrap);
+      el.appendChild(tblSection);
+
+      tblWrap.querySelectorAll('.sort-col').forEach(th => {
+        th.addEventListener('click', () => {
+          const k = th.dataset.key;
+          if (sortKey === k) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+          else { sortKey = k; sortDir = 'desc'; }
+          render();
+        });
+      });
+    }
+
+    // Period toggle
+    document.getElementById('period-group').addEventListener('click', e => {
+      const btn = e.target.closest('.period-btn');
+      if (!btn) return;
+      document.querySelectorAll('.period-btn').forEach(b => { b.style.background='transparent'; b.style.color='#677b82'; b.style.boxShadow='none'; });
+      btn.style.background='white'; btn.style.color='#1c3036'; btn.style.boxShadow='0 1px 2px rgba(0,0,0,0.06)';
+    });
+
+    // Initial
+    updateStoreDropdown();
+    updateScopeBanner();
+    render();
+  </script>
+</body>
+</html>
