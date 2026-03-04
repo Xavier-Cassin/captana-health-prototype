@@ -65,6 +65,7 @@
       </div>
       <nav class="flex items-center gap-1" id="main-nav">
         <button onclick="navigate('company')" class="nav-btn rounded-lg px-3.5 py-1.5 text-sm font-medium text-white" style="background:#1c3036" data-view="company">Monitoring</button>
+        <button onclick="navigate('cvanalysis')" class="nav-btn rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82" data-view="cvanalysis">CV Analysis</button>
         <button onclick="navigate('tasks')" class="nav-btn rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82" data-view="tasks">Tasks</button>
         <button onclick="showAlerts()" class="nav-btn rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82" data-view="alerts">Alerts</button>
       </nav>
@@ -163,6 +164,97 @@
     { id: 'ALT-004', level: 'chain', severity: 'amber', title: 'Tesco – 2 stores with critical camera issues', chain: 'tesco', time: '2h ago', description: 'Multiple stores in Tesco chain flagged with critical health issues' },
     { id: 'ALT-005', level: 'estate', severity: 'amber', title: 'Estate – Image pipeline at 95.1%', time: '3h ago', description: 'System-wide image pipeline success rate approaching amber threshold' },
   ];
+
+  // =========================================================================
+  // STORE VISITS & CV ANALYSIS DATA
+  // =========================================================================
+  const ERROR_CATEGORIES = [
+    { id: 'lighting', label: 'Lighting / Glare / Reflection', color: '#f59e0b' },
+    { id: 'occlusion', label: 'Occlusion (product blocking)', color: '#8b5cf6' },
+    { id: 'label_damage', label: 'Label damage / poor print', color: '#f04438' },
+    { id: 'camera_angle', label: 'Camera angle / distance', color: '#0ea5e9' },
+    { id: 'product_overlap', label: 'Product overlap / tight spacing', color: '#ec4899' },
+    { id: 'unknown_product', label: 'New / unknown product (not in training set)', color: '#14b8a6' },
+    { id: 'shelf_tag_missing', label: 'Shelf tag missing (ground truth)', color: '#6366f1' },
+    { id: 'misclassification', label: 'Model misclassification', color: '#f97316' },
+    { id: 'false_positive', label: 'False positive detection', color: '#ef4444' },
+    { id: 'false_negative', label: 'False negative (missed label)', color: '#dc2626' },
+  ];
+
+  const STORE_VISITS = {
+    'tesco-metro-london': [
+      { id: 'VIS-TML-003', date: '2026-02-18', auditor: 'Sarah Chen', sampledProducts: 320, truePositives: 289, falsePositives: 8, falseNegatives: 23, errors: { lighting: 7, occlusion: 5, label_damage: 3, camera_angle: 2, product_overlap: 4, unknown_product: 3, shelf_tag_missing: 2, misclassification: 3, false_positive: 8, false_negative: 23 }, notes: 'Aisle 3-4 glare issues from new LED installation. Aisle 7 restocking during capture window caused occlusion.' },
+      { id: 'VIS-TML-002', date: '2026-01-14', auditor: 'James Wright', sampledProducts: 310, truePositives: 275, falsePositives: 12, falseNegatives: 23, errors: { lighting: 9, occlusion: 6, label_damage: 2, camera_angle: 4, product_overlap: 3, unknown_product: 2, shelf_tag_missing: 3, misclassification: 4, false_positive: 12, false_negative: 23 }, notes: 'Holiday promotional displays caused unusual shelf layouts.' },
+    ],
+    'tesco-extra-reading': [
+      { id: 'VIS-TER-002', date: '2026-02-25', auditor: 'James Wright', sampledProducts: 480, truePositives: 422, falsePositives: 14, falseNegatives: 44, errors: { lighting: 11, occlusion: 8, label_damage: 6, camera_angle: 5, product_overlap: 7, unknown_product: 4, shelf_tag_missing: 3, misclassification: 6, false_positive: 14, false_negative: 44 }, notes: 'Large format store. Some end-cap cameras struggle with distance. New seasonal products not in training set.' },
+    ],
+    'tesco-express-manchester': [
+      { id: 'VIS-TEM-001', date: '2026-02-10', auditor: 'Sarah Chen', sampledProducts: 180, truePositives: 168, falsePositives: 3, falseNegatives: 9, errors: { lighting: 2, occlusion: 2, label_damage: 1, camera_angle: 1, product_overlap: 2, unknown_product: 1, shelf_tag_missing: 1, misclassification: 2, false_positive: 3, false_negative: 9 }, notes: 'Small store, good camera positioning. Minor issues in chilled section due to condensation.' },
+    ],
+    'tesco-superstore-bristol': [
+      { id: 'VIS-TSB-002', date: '2026-01-28', auditor: 'Mike Thompson', sampledProducts: 420, truePositives: 352, falsePositives: 18, falseNegatives: 50, errors: { lighting: 12, occlusion: 9, label_damage: 8, camera_angle: 7, product_overlap: 6, unknown_product: 5, shelf_tag_missing: 4, misclassification: 9, false_positive: 18, false_negative: 50 }, notes: 'Multiple fallen cameras affecting coverage. PTZ drift on Aisle 5-8 cameras. Urgent recalibration needed.' },
+    ],
+    'carrefour-montesson': [
+      { id: 'VIS-CMO-002', date: '2026-02-20', auditor: 'Pierre Moreau', sampledProducts: 400, truePositives: 364, falsePositives: 9, falseNegatives: 27, errors: { lighting: 6, occlusion: 5, label_damage: 4, camera_angle: 3, product_overlap: 5, unknown_product: 4, shelf_tag_missing: 2, misclassification: 4, false_positive: 9, false_negative: 27 }, notes: 'Good overall performance. French label format well recognized. Some issues with handwritten price tags.' },
+    ],
+    'carrefour-velizy': [
+      { id: 'VIS-CVE-003', date: '2026-02-27', auditor: 'Sophie Laurent', sampledProducts: 520, truePositives: 453, falsePositives: 16, falseNegatives: 51, errors: { lighting: 14, occlusion: 10, label_damage: 7, camera_angle: 6, product_overlap: 8, unknown_product: 5, shelf_tag_missing: 3, misclassification: 7, false_positive: 16, false_negative: 51 }, notes: 'Large hypermarket. Lighting inconsistent between zones. New organic section not yet in training data.' },
+    ],
+    'carrefour-defense': [
+      { id: 'VIS-CDE-001', date: '2026-02-05', auditor: 'Pierre Moreau', sampledProducts: 580, truePositives: 534, falsePositives: 11, falseNegatives: 35, errors: { lighting: 8, occlusion: 6, label_damage: 5, camera_angle: 4, product_overlap: 6, unknown_product: 3, shelf_tag_missing: 4, misclassification: 5, false_positive: 11, false_negative: 35 }, notes: 'Flagship store performing well. Electronic price tags read more reliably than paper.' },
+    ],
+    'auchan-velizy': [
+      { id: 'VIS-AVE-001', date: '2026-02-12', auditor: 'Sophie Laurent', sampledProducts: 340, truePositives: 310, falsePositives: 7, falseNegatives: 23, errors: { lighting: 5, occlusion: 4, label_damage: 3, camera_angle: 3, product_overlap: 4, unknown_product: 2, shelf_tag_missing: 2, misclassification: 3, false_positive: 7, false_negative: 23 }, notes: 'Consistent performance. Auchan label format well handled.' },
+    ],
+    'auchan-boulogne': [
+      { id: 'VIS-ABO-002', date: '2026-02-08', auditor: 'Pierre Moreau', sampledProducts: 280, truePositives: 232, falsePositives: 14, falseNegatives: 34, errors: { lighting: 9, occlusion: 7, label_damage: 6, camera_angle: 5, product_overlap: 5, unknown_product: 4, shelf_tag_missing: 3, misclassification: 5, false_positive: 14, false_negative: 34 }, notes: 'Store has ongoing camera issues affecting image quality. Multiple cameras with battery problems produce dim images.' },
+    ],
+    'ah-amsterdam': [
+      { id: 'VIS-AHA-001', date: '2026-02-15', auditor: 'Jan de Vries', sampledProducts: 260, truePositives: 243, falsePositives: 5, falseNegatives: 12, errors: { lighting: 3, occlusion: 2, label_damage: 2, camera_angle: 1, product_overlap: 3, unknown_product: 2, shelf_tag_missing: 1, misclassification: 2, false_positive: 5, false_negative: 12 }, notes: 'Excellent store conditions. AH electronic labels work very well with CV model.' },
+    ],
+    'ah-rotterdam': [
+      { id: 'VIS-AHR-001', date: '2026-02-22', auditor: 'Jan de Vries', sampledProducts: 280, truePositives: 258, falsePositives: 6, falseNegatives: 16, errors: { lighting: 4, occlusion: 3, label_damage: 2, camera_angle: 2, product_overlap: 3, unknown_product: 2, shelf_tag_missing: 2, misclassification: 2, false_positive: 6, false_negative: 16 }, notes: 'Good performance. Minor issues in wine section due to reflective bottle surfaces.' },
+    ],
+    'ah-utrecht': [
+      { id: 'VIS-AHU-001', date: '2026-02-28', auditor: 'Jan de Vries', sampledProducts: 200, truePositives: 189, falsePositives: 3, falseNegatives: 8, errors: { lighting: 2, occlusion: 1, label_damage: 1, camera_angle: 1, product_overlap: 2, unknown_product: 1, shelf_tag_missing: 1, misclassification: 1, false_positive: 3, false_negative: 8 }, notes: 'Newest store installation. Camera positioning optimized from lessons learned.' },
+    ],
+  };
+
+  const NEXT_VISITS = {
+    'tesco-metro-london': { date: '2026-03-18', auditor: 'Sarah Chen' },
+    'tesco-extra-reading': { date: '2026-03-25', auditor: 'James Wright' },
+    'tesco-express-manchester': { date: '2026-04-10', auditor: 'Sarah Chen' },
+    'tesco-superstore-bristol': { date: '2026-03-08', auditor: 'Mike Thompson' },
+    'carrefour-montesson': { date: '2026-03-20', auditor: 'Pierre Moreau' },
+    'carrefour-velizy': { date: '2026-03-12', auditor: 'Sophie Laurent' },
+    'carrefour-defense': { date: '2026-04-05', auditor: 'Pierre Moreau' },
+    'auchan-velizy': { date: '2026-04-12', auditor: 'Sophie Laurent' },
+    'auchan-boulogne': { date: '2026-03-10', auditor: 'Pierre Moreau' },
+    'ah-amsterdam': { date: '2026-04-15', auditor: 'Jan de Vries' },
+    'ah-rotterdam': { date: '2026-03-22', auditor: 'Jan de Vries' },
+    'ah-utrecht': { date: '2026-04-28', auditor: 'Jan de Vries' },
+  };
+
+  function getVisitAccuracy(visit) {
+    const precision = visit.truePositives / (visit.truePositives + visit.falsePositives);
+    const recall = visit.truePositives / (visit.truePositives + visit.falseNegatives);
+    const f1 = 2 * (precision * recall) / (precision + recall);
+    const accuracy = visit.truePositives / visit.sampledProducts;
+    return { precision, recall, f1, accuracy };
+  }
+
+  function getLatestVisit(storeId) {
+    const visits = STORE_VISITS[storeId];
+    return visits ? visits[0] : null;
+  }
+
+  function daysUntil(dateStr) {
+    const target = new Date(dateStr);
+    const now = new Date('2026-03-04');
+    const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    return diff;
+  }
 
   // =========================================================================
   // TASKS DATA (Phase 2)
@@ -330,6 +422,7 @@
     document.querySelectorAll('.nav-btn').forEach(btn => {
       const v = btn.dataset.view;
       const isActive = (v === 'tasks' && currentView === 'tasks') ||
+                       (v === 'cvanalysis' && currentView === 'cvanalysis') ||
                        (v === 'company' && ['company','chain','store','camera'].includes(currentView));
       btn.style.background = isActive ? '#1c3036' : 'transparent';
       btn.style.color = isActive ? 'white' : '#677b82';
@@ -340,7 +433,7 @@
   function updateBreadcrumb() {
     const bar = document.getElementById('breadcrumb-bar');
     const bc = document.getElementById('breadcrumb');
-    if (currentView === 'company' || currentView === 'tasks') {
+    if (currentView === 'company' || currentView === 'tasks' || currentView === 'cvanalysis') {
       bar.classList.add('hidden');
       return;
     }
@@ -386,6 +479,7 @@
       case 'store': renderStoreView(el); break;
       case 'camera': renderCameraView(el); break;
       case 'tasks': renderTasksView(el); break;
+      case 'cvanalysis': renderCVAnalysisView(el); break;
     }
   }
 
@@ -579,6 +673,9 @@
         ${kpiCard('Image Issues', store.imgIssues, store.cameras, 'imageQuality')}
       </div>
 
+      <!-- CV MODEL PERFORMANCE SECTION -->
+      ${renderStoreCVSection(store)}
+
       <div>
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-base font-semibold" style="color:#1c3036">Cameras (${store.cameras})</h2>
@@ -595,6 +692,88 @@
     `;
 
     renderCamerasTable(cameras, 'all');
+  }
+
+  function renderStoreCVSection(store) {
+    const visit = getLatestVisit(store.id);
+    const next = NEXT_VISITS[store.id];
+    if (!visit && !next) return '';
+
+    let html = '<div class="rounded-xl border bg-white p-5" style="border-color:#e3eaed">';
+    html += '<div class="flex items-center justify-between mb-4">';
+    html += '<h2 class="text-sm font-semibold" style="color:#475e66">CV Model Performance</h2>';
+    if (visit) {
+      html += `<button class="text-xs font-medium hover:underline" style="color:#2563eb" onclick="showVisitDetail('${store.id}','${visit.id}')">View Full Analysis</button>`;
+    }
+    html += '</div>';
+
+    if (visit) {
+      const acc = getVisitAccuracy(visit);
+      const accColor = acc.accuracy >= 0.9 ? '#12b76a' : acc.accuracy >= 0.8 ? '#d97706' : '#f04438';
+      const totalErrs = Object.values(visit.errors).reduce((a, b) => a + b, 0);
+      const topErrors = ERROR_CATEGORIES.map(ec => ({ ...ec, count: visit.errors[ec.id] || 0 })).sort((a, b) => b.count - a.count).slice(0, 4);
+      const maxErr = topErrors[0]?.count || 1;
+
+      html += `
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+          <div class="rounded-lg p-3" style="background:#f7fbfc">
+            <p class="text-xs" style="color:#9aaab0">Accuracy</p>
+            <p class="text-lg font-bold" style="color:${accColor}">${(acc.accuracy * 100).toFixed(1)}%</p>
+          </div>
+          <div class="rounded-lg p-3" style="background:#f7fbfc">
+            <p class="text-xs" style="color:#9aaab0">Precision</p>
+            <p class="text-lg font-bold" style="color:#1c3036">${(acc.precision * 100).toFixed(1)}%</p>
+          </div>
+          <div class="rounded-lg p-3" style="background:#f7fbfc">
+            <p class="text-xs" style="color:#9aaab0">Recall</p>
+            <p class="text-lg font-bold" style="color:#1c3036">${(acc.recall * 100).toFixed(1)}%</p>
+          </div>
+          <div class="rounded-lg p-3" style="background:#f7fbfc">
+            <p class="text-xs" style="color:#9aaab0">F1</p>
+            <p class="text-lg font-bold" style="color:#1c3036">${(acc.f1 * 100).toFixed(1)}%</p>
+          </div>
+          <div class="rounded-lg p-3" style="background:#f7fbfc">
+            <p class="text-xs" style="color:#9aaab0">Sampled</p>
+            <p class="text-lg font-bold" style="color:#1c3036">${visit.sampledProducts}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 mb-3">
+          <span class="text-xs" style="color:#9aaab0">Last visit: <strong style="color:#3d5761">${visit.date}</strong> by ${visit.auditor}</span>
+        </div>
+        <p class="text-xs font-medium mb-2" style="color:#677b82">Top Error Root Causes</p>
+        <div class="flex flex-col gap-1.5">
+          ${topErrors.filter(e => e.count > 0).map(err => `
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="min-width:180px;font-size:11px;color:#3d5761;text-align:right">${err.label}</div>
+              <div style="flex:1;height:14px;background:#f1f7f9;border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${(err.count / maxErr) * 100}%;background:${err.color};border-radius:3px"></div>
+              </div>
+              <div style="min-width:30px;font-size:11px;font-weight:500;color:#1c3036">${err.count}</div>
+            </div>
+          `).join('')}
+        </div>`;
+    } else {
+      html += '<p class="text-sm" style="color:#9aaab0">No visit data available yet.</p>';
+    }
+
+    if (next) {
+      const days = daysUntil(next.date);
+      const urgency = days <= 7 ? 'red' : days <= 14 ? 'amber' : 'blue';
+      html += `
+        <div class="mt-4 rounded-lg p-3 flex items-center justify-between" style="background:#eff6ff;border:1px solid #dbeafe">
+          <div class="flex items-center gap-3">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div>
+              <p class="text-xs font-medium" style="color:#2563eb">Next Planned Visit</p>
+              <p class="text-sm font-medium" style="color:#1c3036">${next.date} &middot; ${next.auditor}</p>
+            </div>
+          </div>
+          <span class="badge badge-${urgency}">${days >= 0 ? (days === 0 ? 'Today' : `In ${days} days`) : 'Overdue'}</span>
+        </div>`;
+    }
+
+    html += '</div>';
+    return html;
   }
 
   function filterCameras(btn, filter) {
@@ -1020,6 +1199,303 @@
                 <p class="text-xs mt-1" style="color:#677b82">${a.description}</p>
               </div>
             `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // =========================================================================
+  // CV ANALYSIS VIEW
+  // =========================================================================
+  function renderCVAnalysisView(el) {
+    const allStores = CHAINS.flatMap(c => c.stores);
+    let totalSampled = 0, totalTP = 0, totalFP = 0, totalFN = 0;
+    const allErrors = {};
+    ERROR_CATEGORIES.forEach(ec => allErrors[ec.id] = 0);
+    const storeRows = [];
+
+    allStores.forEach(store => {
+      const visit = getLatestVisit(store.id);
+      if (!visit) return;
+      totalSampled += visit.sampledProducts;
+      totalTP += visit.truePositives;
+      totalFP += visit.falsePositives;
+      totalFN += visit.falseNegatives;
+      Object.entries(visit.errors).forEach(([k, v]) => { allErrors[k] = (allErrors[k] || 0) + v; });
+      const acc = getVisitAccuracy(visit);
+      const chain = CHAINS.find(c => c.stores.some(s => s.id === store.id));
+      const next = NEXT_VISITS[store.id];
+      const daysLeft = next ? daysUntil(next.date) : null;
+      storeRows.push({ store, chain, visit, acc, next, daysLeft });
+    });
+
+    const globalPrecision = totalTP / (totalTP + totalFP);
+    const globalRecall = totalTP / (totalTP + totalFN);
+    const globalF1 = 2 * (globalPrecision * globalRecall) / (globalPrecision + globalRecall);
+    const globalAccuracy = totalTP / totalSampled;
+
+    const totalErrors = Object.values(allErrors).reduce((a, b) => a + b, 0);
+    const sortedErrors = ERROR_CATEGORIES.map(ec => ({ ...ec, count: allErrors[ec.id], pct: totalErrors > 0 ? (allErrors[ec.id] / totalErrors * 100) : 0 })).sort((a, b) => b.count - a.count);
+
+    const upcomingVisits = storeRows.filter(r => r.daysLeft !== null && r.daysLeft >= 0).sort((a, b) => a.daysLeft - b.daysLeft);
+
+    el.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-semibold" style="color:#1c3036">CV Model Performance Analysis</h1>
+          <p class="text-sm mt-0.5" style="color:#677b82">Accuracy assessed via in-store visits &middot; Reality vs. Model comparison</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#677b82" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="text-xs font-medium" style="color:#677b82">Based on ${storeRows.length} store visits &middot; ${fmtNum(totalSampled)} products sampled</span>
+        </div>
+      </div>
+
+      <!-- GLOBAL ACCURACY KPIs -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="kpi-card">
+          <span class="text-xs font-medium" style="color:#677b82">Overall Accuracy</span>
+          <p class="text-2xl font-bold mt-2" style="color:${globalAccuracy >= 0.9 ? '#12b76a' : globalAccuracy >= 0.8 ? '#d97706' : '#f04438'}">${(globalAccuracy * 100).toFixed(1)}%</p>
+          <p class="text-xs mt-1" style="color:#9aaab0">${fmtNum(totalTP)} correct / ${fmtNum(totalSampled)} sampled</p>
+        </div>
+        <div class="kpi-card">
+          <span class="text-xs font-medium" style="color:#677b82">Precision</span>
+          <p class="text-2xl font-bold mt-2" style="color:${globalPrecision >= 0.95 ? '#12b76a' : globalPrecision >= 0.9 ? '#d97706' : '#f04438'}">${(globalPrecision * 100).toFixed(1)}%</p>
+          <p class="text-xs mt-1" style="color:#9aaab0">TP / (TP + FP) &middot; ${fmtNum(totalFP)} false positives</p>
+        </div>
+        <div class="kpi-card">
+          <span class="text-xs font-medium" style="color:#677b82">Recall</span>
+          <p class="text-2xl font-bold mt-2" style="color:${globalRecall >= 0.92 ? '#12b76a' : globalRecall >= 0.85 ? '#d97706' : '#f04438'}">${(globalRecall * 100).toFixed(1)}%</p>
+          <p class="text-xs mt-1" style="color:#9aaab0">TP / (TP + FN) &middot; ${fmtNum(totalFN)} missed</p>
+        </div>
+        <div class="kpi-card">
+          <span class="text-xs font-medium" style="color:#677b82">F1 Score</span>
+          <p class="text-2xl font-bold mt-2" style="color:${globalF1 >= 0.93 ? '#12b76a' : globalF1 >= 0.87 ? '#d97706' : '#f04438'}">${(globalF1 * 100).toFixed(1)}%</p>
+          <p class="text-xs mt-1" style="color:#9aaab0">Harmonic mean of precision & recall</p>
+        </div>
+      </div>
+
+      <!-- ROOT CAUSE ANALYSIS -->
+      <div class="rounded-xl border bg-white p-5" style="border-color:#e3eaed">
+        <h2 class="text-sm font-semibold mb-4" style="color:#475e66">Root Cause Analysis – Error Distribution (all visits)</h2>
+        <div class="flex flex-col gap-3" id="error-bars"></div>
+      </div>
+
+      <!-- UPCOMING VISITS -->
+      <div>
+        <h2 class="text-base font-semibold mb-3" style="color:#1c3036">Upcoming Store Visits</h2>
+        <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" id="upcoming-visits"></div>
+      </div>
+
+      <!-- PER-STORE ACCURACY TABLE -->
+      <div>
+        <h2 class="text-base font-semibold mb-3" style="color:#1c3036">Accuracy by Store (Latest Visit)</h2>
+        <div class="overflow-hidden rounded-xl border bg-white" style="border-color:#e3eaed" id="cv-store-table"></div>
+      </div>
+    `;
+
+    const errorBars = document.getElementById('error-bars');
+    const maxCount = sortedErrors[0]?.count || 1;
+    sortedErrors.forEach(err => {
+      if (err.count === 0) return;
+      const barDiv = document.createElement('div');
+      barDiv.className = 'flex items-center gap-3';
+      barDiv.innerHTML = `
+        <div style="min-width:220px;font-size:12px;color:#3d5761;text-align:right">${err.label}</div>
+        <div style="flex:1;height:24px;background:#f1f7f9;border-radius:6px;overflow:hidden;position:relative">
+          <div style="height:100%;width:${(err.count / maxCount) * 100}%;background:${err.color};border-radius:6px;transition:width 0.4s"></div>
+        </div>
+        <div style="min-width:80px;font-size:12px;font-weight:500;color:#1c3036">${err.count} <span style="color:#9aaab0">(${err.pct.toFixed(1)}%)</span></div>
+      `;
+      errorBars.appendChild(barDiv);
+    });
+
+    const visitsContainer = document.getElementById('upcoming-visits');
+    upcomingVisits.slice(0, 8).forEach(r => {
+      const urgency = r.daysLeft <= 7 ? 'red' : r.daysLeft <= 14 ? 'amber' : 'green';
+      const card = document.createElement('div');
+      card.className = 'kpi-card cursor-pointer';
+      card.style.minWidth = '200px';
+      card.onclick = () => { const chain = CHAINS.find(c => c.stores.some(s => s.id === r.store.id)); navigate('store', chain.id, r.store.id); };
+      card.innerHTML = `
+        <div class="flex items-center gap-2 mb-2">
+          ${statusDot(urgency)}
+          <span class="text-xs font-medium" style="color:#677b82">${r.daysLeft === 0 ? 'Today' : r.daysLeft === 1 ? 'Tomorrow' : `In ${r.daysLeft} days`}</span>
+        </div>
+        <p class="text-sm font-medium" style="color:#1c3036">${r.store.name}</p>
+        <p class="text-xs mt-1" style="color:#9aaab0">${r.next.date}</p>
+        <p class="text-xs" style="color:#677b82">${r.next.auditor}</p>
+      `;
+      visitsContainer.appendChild(card);
+    });
+
+    const tbl = document.getElementById('cv-store-table');
+    let html = `<table style="width:100%;text-align:left;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Store</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Chain</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Last Visit</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Sampled</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Accuracy</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Precision</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Recall</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">F1</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Next Visit</th>
+        <th style="padding:12px 16px"></th>
+      </tr></thead><tbody>`;
+
+    storeRows.sort((a, b) => a.acc.accuracy - b.acc.accuracy).forEach(r => {
+      const accColor = r.acc.accuracy >= 0.9 ? '#12b76a' : r.acc.accuracy >= 0.8 ? '#d97706' : '#f04438';
+      const nextLabel = r.next ? r.next.date : '—';
+      const dLabel = r.daysLeft !== null && r.daysLeft >= 0 ? `<span style="font-size:10px;color:#9aaab0">(${r.daysLeft}d)</span>` : '';
+      html += `<tr class="row-link" style="border-bottom:1px solid #f1f7f9" onclick="showVisitDetail('${r.store.id}','${r.visit.id}')">
+        <td style="padding:12px 16px;font-size:13px;font-weight:500;color:#1c3036">${r.store.name}</td>
+        <td style="padding:12px 16px;font-size:12px;color:#677b82">${r.chain.name}</td>
+        <td style="padding:12px 16px;text-align:center;font-size:12px;color:#3d5761">${r.visit.date}</td>
+        <td style="padding:12px 16px;text-align:center;font-size:13px;color:#3d5761">${r.visit.sampledProducts}</td>
+        <td style="padding:12px 16px;text-align:center;font-size:13px;font-weight:600;color:${accColor}">${(r.acc.accuracy * 100).toFixed(1)}%</td>
+        <td style="padding:12px 16px;text-align:center;font-size:13px;color:#3d5761">${(r.acc.precision * 100).toFixed(1)}%</td>
+        <td style="padding:12px 16px;text-align:center;font-size:13px;color:#3d5761">${(r.acc.recall * 100).toFixed(1)}%</td>
+        <td style="padding:12px 16px;text-align:center;font-size:13px;color:#3d5761">${(r.acc.f1 * 100).toFixed(1)}%</td>
+        <td style="padding:12px 16px;text-align:center;font-size:12px;color:#3d5761">${nextLabel} ${dLabel}</td>
+        <td style="padding:12px 16px;text-align:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aaab0" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    tbl.innerHTML = html;
+  }
+
+  // =========================================================================
+  // VISIT DETAIL MODAL
+  // =========================================================================
+  function showVisitDetail(storeId, visitId) {
+    const visits = STORE_VISITS[storeId] || [];
+    const visit = visits.find(v => v.id === visitId) || visits[0];
+    if (!visit) return;
+    const store = CHAINS.flatMap(c => c.stores).find(s => s.id === storeId);
+    const chain = CHAINS.find(c => c.stores.some(s => s.id === storeId));
+    const acc = getVisitAccuracy(visit);
+    const next = NEXT_VISITS[storeId];
+    const allVisits = visits;
+
+    const totalErrs = Object.values(visit.errors).reduce((a, b) => a + b, 0);
+    const maxErr = Math.max(...Object.values(visit.errors));
+    const errorBarsHTML = ERROR_CATEGORIES
+      .map(ec => ({ ...ec, count: visit.errors[ec.id] || 0 }))
+      .sort((a, b) => b.count - a.count)
+      .filter(e => e.count > 0)
+      .map(err => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <div style="min-width:180px;font-size:11px;color:#3d5761;text-align:right">${err.label}</div>
+          <div style="flex:1;height:18px;background:#f1f7f9;border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${(err.count / maxErr) * 100}%;background:${err.color};border-radius:4px"></div>
+          </div>
+          <div style="min-width:55px;font-size:11px;font-weight:500;color:#1c3036">${err.count} <span style="color:#9aaab0">(${totalErrs > 0 ? (err.count / totalErrs * 100).toFixed(0) : 0}%)</span></div>
+        </div>
+      `).join('');
+
+    const confusionHTML = `
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:0;border:1px solid #e3eaed;border-radius:8px;overflow:hidden;font-size:12px;max-width:320px">
+        <div style="padding:10px;background:#f7fbfc;border-bottom:1px solid #e3eaed;border-right:1px solid #e3eaed"></div>
+        <div style="padding:10px;background:#f7fbfc;border-bottom:1px solid #e3eaed;border-right:1px solid #e3eaed;font-weight:600;color:#475e66;text-align:center">Pred. Positive</div>
+        <div style="padding:10px;background:#f7fbfc;border-bottom:1px solid #e3eaed;font-weight:600;color:#475e66;text-align:center">Pred. Negative</div>
+        <div style="padding:10px;background:#f7fbfc;border-right:1px solid #e3eaed;font-weight:600;color:#475e66">Actual Positive</div>
+        <div style="padding:10px;text-align:center;font-weight:700;color:#12b76a;border-right:1px solid #f1f7f9;border-bottom:1px solid #f1f7f9">TP: ${visit.truePositives}</div>
+        <div style="padding:10px;text-align:center;font-weight:700;color:#f04438;border-bottom:1px solid #f1f7f9">FN: ${visit.falseNegatives}</div>
+        <div style="padding:10px;background:#f7fbfc;border-right:1px solid #e3eaed;font-weight:600;color:#475e66">Actual Negative</div>
+        <div style="padding:10px;text-align:center;font-weight:700;color:#f04438;border-right:1px solid #f1f7f9">FP: ${visit.falsePositives}</div>
+        <div style="padding:10px;text-align:center;font-weight:700;color:#12b76a">TN: —</div>
+      </div>
+    `;
+
+    const visitHistoryHTML = allVisits.length > 1 ? `
+      <div style="margin-top:16px">
+        <p class="text-xs font-medium mb-2" style="color:#677b82">Visit History</p>
+        ${allVisits.map(v => {
+          const a = getVisitAccuracy(v);
+          const isCurrent = v.id === visit.id;
+          return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f1f7f9;${isCurrent ? 'background:#f7fbfc;margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:6px' : ''}" class="${!isCurrent ? 'row-link' : ''}" ${!isCurrent ? `onclick="closeModal();showVisitDetail('${storeId}','${v.id}')"` : ''}>
+            <span style="font-size:12px;color:#3d5761;min-width:90px">${v.date}</span>
+            <span style="font-size:12px;color:#677b82">${v.auditor}</span>
+            <span style="font-size:12px;font-weight:600;color:${a.accuracy >= 0.9 ? '#12b76a' : '#d97706'};margin-left:auto">${(a.accuracy * 100).toFixed(1)}% acc</span>
+            ${isCurrent ? '<span class="badge badge-blue">Current</span>' : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    ` : '';
+
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal-panel fade-in" style="max-width:780px">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge badge-blue">${visit.id}</span>
+                <span class="text-xs" style="color:#9aaab0">${visit.date}</span>
+              </div>
+              <h2 class="text-lg font-semibold" style="color:#1c3036">${store?.name || storeId}</h2>
+              <p class="text-xs" style="color:#677b82">${chain?.name || ''} &middot; Auditor: ${visit.auditor} &middot; ${visit.sampledProducts} products sampled</p>
+            </div>
+            <button onclick="closeModal()" class="rounded-lg p-2 hover:bg-gray-100">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#677b82" stroke-width="2"><path stroke-linecap="round" d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <!-- ACCURACY METRICS -->
+          <div class="grid grid-cols-4 gap-3 mb-5">
+            <div class="rounded-xl p-3" style="background:#f7fbfc">
+              <p class="text-xs" style="color:#677b82">Accuracy</p>
+              <p class="text-xl font-bold" style="color:${acc.accuracy >= 0.9 ? '#12b76a' : '#d97706'}">${(acc.accuracy * 100).toFixed(1)}%</p>
+            </div>
+            <div class="rounded-xl p-3" style="background:#f7fbfc">
+              <p class="text-xs" style="color:#677b82">Precision</p>
+              <p class="text-xl font-bold" style="color:#1c3036">${(acc.precision * 100).toFixed(1)}%</p>
+            </div>
+            <div class="rounded-xl p-3" style="background:#f7fbfc">
+              <p class="text-xs" style="color:#677b82">Recall</p>
+              <p class="text-xl font-bold" style="color:#1c3036">${(acc.recall * 100).toFixed(1)}%</p>
+            </div>
+            <div class="rounded-xl p-3" style="background:#f7fbfc">
+              <p class="text-xs" style="color:#677b82">F1 Score</p>
+              <p class="text-xl font-bold" style="color:#1c3036">${(acc.f1 * 100).toFixed(1)}%</p>
+            </div>
+          </div>
+
+          <!-- CONFUSION MATRIX -->
+          <div class="mb-5">
+            <p class="text-xs font-medium mb-3" style="color:#677b82">Confusion Matrix</p>
+            ${confusionHTML}
+          </div>
+
+          <!-- ROOT CAUSE -->
+          <div class="mb-5">
+            <p class="text-xs font-medium mb-3" style="color:#677b82">Root Cause Analysis – Error Breakdown</p>
+            ${errorBarsHTML}
+          </div>
+
+          <!-- NOTES -->
+          <div class="rounded-lg p-3 mb-4" style="background:#fffbeb;border:1px solid #fef3c7">
+            <p class="text-xs font-medium mb-1" style="color:#d97706">Auditor Notes</p>
+            <p class="text-sm" style="color:#3d5761">${visit.notes}</p>
+          </div>
+
+          <!-- NEXT VISIT -->
+          ${next ? `
+          <div class="rounded-lg p-3 mb-4" style="background:#eff6ff;border:1px solid #dbeafe">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs font-medium mb-1" style="color:#2563eb">Next Planned Visit</p>
+                <p class="text-sm font-medium" style="color:#1c3036">${next.date} &middot; ${next.auditor}</p>
+              </div>
+              <span class="badge badge-blue">${daysUntil(next.date) >= 0 ? `In ${daysUntil(next.date)} days` : 'Overdue'}</span>
+            </div>
+          </div>` : ''}
+
+          ${visitHistoryHTML}
+
+          <div class="flex gap-3 mt-4">
+            <button class="flex-1 rounded-lg py-2.5 text-sm font-medium text-white" style="background:#1c3036" onclick="closeModal()">Close</button>
           </div>
         </div>
       </div>
