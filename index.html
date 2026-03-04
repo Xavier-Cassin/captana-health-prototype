@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Captana – System Health Monitoring</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sl: {
+              50: '#f7fbfc', 100: '#f1f7f9', 200: '#e3eaed', 300: '#d0dadd',
+              400: '#9aaab0', 500: '#677b82', 600: '#475e66', 700: '#3d5761',
+              800: '#1c3036', 900: '#102126',
+            },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; background: #f7fbfc; color: #1c3036; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .fade-in { animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.5 } }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24' stroke='%239aaab0' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    .kpi-card { border-radius: 16px; border: 1px solid #e3eaed; padding: 20px; background: white; transition: box-shadow 0.15s; }
+    .kpi-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .health-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .status-green { background: #12b76a; }
+    .status-amber { background: #f59e0b; }
+    .status-red { background: #f04438; }
+    .row-link { cursor: pointer; transition: background 0.1s; }
+    .row-link:hover { background: #f7fbfc !important; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: #ecfdf3; color: #12b76a; }
+    .badge-amber { background: #fffbeb; color: #d97706; }
+    .badge-red { background: #fef3f2; color: #f04438; }
+    .badge-blue { background: #eff6ff; color: #2563eb; }
+    .badge-gray { background: #f1f7f9; color: #677b82; }
+    .tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 500; border-radius: 8px; cursor: pointer; border: none; background: transparent; color: #677b82; transition: all 0.15s; }
+    .tab-btn.active { background: white; color: #1c3036; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: center; justify-content: center; }
+    .modal-panel { background: white; border-radius: 16px; max-width: 640px; width: 95%; max-height: 85vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+    .alert-bell { position: relative; }
+    .alert-count { position: absolute; top: -4px; right: -6px; background: #f04438; color: white; font-size: 9px; font-weight: 700; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV BAR -->
+  <header id="navbar" class="flex items-center justify-between border-b bg-white px-5 py-2.5" style="border-color:#e3eaed">
+    <div class="flex items-center gap-7">
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigate('company')">
+        <div class="flex items-center justify-center rounded-lg text-white font-bold" style="width:32px;height:32px;background:#1c3036;font-size:11px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="2"/><path d="M12 8v4l2.5 2.5" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <span class="text-sm font-semibold" style="color:#1c3036">Captana Health</span>
+      </div>
+      <nav class="flex items-center gap-1" id="main-nav">
+        <button onclick="navigate('company')" class="nav-btn rounded-lg px-3.5 py-1.5 text-sm font-medium text-white" style="background:#1c3036" data-view="company">Monitoring</button>
+        <button onclick="navigate('tasks')" class="nav-btn rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82" data-view="tasks">Tasks</button>
+        <button onclick="showAlerts()" class="nav-btn rounded-lg px-3.5 py-1.5 text-sm hover:bg-gray-50 transition" style="color:#677b82" data-view="alerts">Alerts</button>
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex flex-col items-end gap-0.5">
+        <span style="font-size:10px;font-weight:600;color:#9aaab0;text-transform:uppercase;letter-spacing:0.04em">Role</span>
+        <select id="role-select" class="rounded-lg border px-3 py-1 text-xs outline-none" style="border-color:#e3eaed;color:#3d5761;min-width:110px" onchange="handleRoleChange()">
+          <option value="admin">Admin</option>
+          <option value="operations" selected>Operations</option>
+          <option value="field">Field</option>
+        </select>
+      </div>
+      <button class="alert-bell rounded-lg p-1.5 hover:bg-gray-50" onclick="showAlerts()">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#677b82" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="alert-count" id="alert-count">5</span>
+      </button>
+      <div class="rounded-full flex items-center justify-center text-white text-xs font-bold" style="width:32px;height:32px;background:#475e66">OP</div>
+    </div>
+  </header>
+
+  <!-- BREADCRUMB -->
+  <div id="breadcrumb-bar" class="bg-white border-b px-6 py-2 hidden" style="border-color:#e3eaed">
+    <div class="flex items-center gap-2 text-xs" id="breadcrumb"></div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="mx-auto px-6 py-6" style="max-width:1280px">
+    <div id="page-content" class="flex flex-col gap-6 fade-in"></div>
+  </main>
+
+  <!-- MODAL CONTAINER -->
+  <div id="modal-root"></div>
+
+  <script>
+  // =========================================================================
+  // DATA MODEL
+  // =========================================================================
+  const CHAINS = [
+    { id: 'tesco', name: 'Tesco', country: 'UK', stores: [
+      { id: 'tesco-metro-london', name: 'Tesco Metro London Bridge', cameras: 48, online: 46, battLow: 2, img48: { actual: 1380, expected: 1440 }, uptime: { actual: 1390, expected: 1440 }, blinkId: { actual: 1350, expected: 1440 }, labels: { actual: 41200, expected: 43200 }, imgIssues: 1 },
+      { id: 'tesco-extra-reading', name: 'Tesco Extra Reading', cameras: 72, online: 68, battLow: 5, img48: { actual: 2050, expected: 2160 }, uptime: { actual: 2080, expected: 2160 }, blinkId: { actual: 2000, expected: 2160 }, labels: { actual: 61000, expected: 64800 }, imgIssues: 3 },
+      { id: 'tesco-express-manchester', name: 'Tesco Express Manchester', cameras: 24, online: 24, battLow: 0, img48: { actual: 710, expected: 720 }, uptime: { actual: 715, expected: 720 }, blinkId: { actual: 700, expected: 720 }, labels: { actual: 20800, expected: 21600 }, imgIssues: 0 },
+      { id: 'tesco-superstore-bristol', name: 'Tesco Superstore Bristol', cameras: 56, online: 48, battLow: 8, img48: { actual: 1500, expected: 1680 }, uptime: { actual: 1520, expected: 1680 }, blinkId: { actual: 1400, expected: 1680 }, labels: { actual: 44000, expected: 50400 }, imgIssues: 4 },
+    ]},
+    { id: 'carrefour', name: 'Carrefour', country: 'FR', stores: [
+      { id: 'carrefour-montesson', name: 'Carrefour Montesson', cameras: 64, online: 62, battLow: 3, img48: { actual: 1880, expected: 1920 }, uptime: { actual: 1890, expected: 1920 }, blinkId: { actual: 1860, expected: 1920 }, labels: { actual: 55000, expected: 57600 }, imgIssues: 1 },
+      { id: 'carrefour-velizy', name: 'Carrefour Vélizy', cameras: 80, online: 74, battLow: 6, img48: { actual: 2200, expected: 2400 }, uptime: { actual: 2250, expected: 2400 }, blinkId: { actual: 2150, expected: 2400 }, labels: { actual: 65000, expected: 72000 }, imgIssues: 5 },
+      { id: 'carrefour-defense', name: 'Carrefour La Défense', cameras: 96, online: 91, battLow: 4, img48: { actual: 2780, expected: 2880 }, uptime: { actual: 2800, expected: 2880 }, blinkId: { actual: 2760, expected: 2880 }, labels: { actual: 83000, expected: 86400 }, imgIssues: 2 },
+    ]},
+    { id: 'auchan', name: 'Auchan', country: 'FR', stores: [
+      { id: 'auchan-velizy', name: 'Auchan Vélizy', cameras: 52, online: 50, battLow: 1, img48: { actual: 1530, expected: 1560 }, uptime: { actual: 1540, expected: 1560 }, blinkId: { actual: 1510, expected: 1560 }, labels: { actual: 44800, expected: 46800 }, imgIssues: 1 },
+      { id: 'auchan-boulogne', name: 'Auchan Boulogne', cameras: 44, online: 38, battLow: 7, img48: { actual: 1100, expected: 1320 }, uptime: { actual: 1150, expected: 1320 }, blinkId: { actual: 1050, expected: 1320 }, labels: { actual: 33000, expected: 39600 }, imgIssues: 6 },
+    ]},
+    { id: 'ahold', name: 'Ahold Delhaize', country: 'NL', stores: [
+      { id: 'ah-amsterdam', name: 'Albert Heijn Amsterdam', cameras: 36, online: 35, battLow: 1, img48: { actual: 1060, expected: 1080 }, uptime: { actual: 1065, expected: 1080 }, blinkId: { actual: 1050, expected: 1080 }, labels: { actual: 31000, expected: 32400 }, imgIssues: 0 },
+      { id: 'ah-rotterdam', name: 'Albert Heijn Rotterdam', cameras: 40, online: 39, battLow: 2, img48: { actual: 1170, expected: 1200 }, uptime: { actual: 1180, expected: 1200 }, blinkId: { actual: 1160, expected: 1200 }, labels: { actual: 34500, expected: 36000 }, imgIssues: 1 },
+      { id: 'ah-utrecht', name: 'Albert Heijn Utrecht', cameras: 28, online: 28, battLow: 0, img48: { actual: 835, expected: 840 }, uptime: { actual: 838, expected: 840 }, blinkId: { actual: 830, expected: 840 }, labels: { actual: 24200, expected: 25200 }, imgIssues: 0 },
+    ]},
+  ];
+
+  function generateCameras(store) {
+    const cams = [];
+    const issues = ['ptz_misaligned','blur','obstruction','fallen','none'];
+    for (let i = 1; i <= store.cameras; i++) {
+      const isOnline = i <= store.online;
+      const batt = i <= store.battLow ? Math.floor(Math.random()*15)+3 : Math.floor(Math.random()*60)+30;
+      const hasIssue = i <= store.imgIssues;
+      const issue = hasIssue ? issues[Math.floor(Math.random()*4)] : 'none';
+      const imgs24h = isOnline ? Math.floor(Math.random()*6)+24 : 0;
+      cams.push({
+        id: `CAM-${store.id.toUpperCase().slice(0,6)}-${String(i).padStart(3,'0')}`,
+        aisle: `Aisle ${Math.ceil(i/4)}`,
+        online: isOnline,
+        battery: batt,
+        lastSeen: isOnline ? 'Just now' : `${Math.floor(Math.random()*48)+2}h ago`,
+        images24h: imgs24h,
+        expected24h: 30,
+        blinkOk: isOnline ? Math.random() > 0.1 : false,
+        issue: issue,
+        firmware: '4.2.1',
+        model: 'VuCam Pro 48MP',
+        installedDate: '2025-09-15',
+      });
+    }
+    return cams;
+  }
+
+  // =========================================================================
+  // ALERTS DATA
+  // =========================================================================
+  const ALERTS = [
+    { id: 'ALT-001', level: 'store', severity: 'red', title: 'Tesco Superstore Bristol – 14% cameras offline', store: 'tesco-superstore-bristol', chain: 'tesco', time: '12 min ago', description: '>20% cameras offline threshold breached (8/56 offline)' },
+    { id: 'ALT-002', level: 'store', severity: 'red', title: 'Auchan Boulogne – 16% cameras low battery', store: 'auchan-boulogne', chain: 'auchan', time: '28 min ago', description: '>10% cameras low battery threshold breached (7/44)' },
+    { id: 'ALT-003', level: 'store', severity: 'amber', title: 'Carrefour Vélizy – Image capture failure 8.3%', store: 'carrefour-velizy', chain: 'carrefour', time: '1h ago', description: 'Image capture failure approaching 10% threshold' },
+    { id: 'ALT-004', level: 'chain', severity: 'amber', title: 'Tesco – 2 stores with critical camera issues', chain: 'tesco', time: '2h ago', description: 'Multiple stores in Tesco chain flagged with critical health issues' },
+    { id: 'ALT-005', level: 'estate', severity: 'amber', title: 'Estate – Image pipeline at 95.1%', time: '3h ago', description: 'System-wide image pipeline success rate approaching amber threshold' },
+  ];
+
+  // =========================================================================
+  // TASKS DATA (Phase 2)
+  // =========================================================================
+  const TASKS = [
+    { id: 'TSK-001', store: 'Tesco Superstore Bristol', storeId: 'tesco-superstore-bristol', cameraId: 'CAM-TESCO-012', issueType: 'Camera Offline', action: 'Restore connectivity', priority: 'High', status: 'Open', owner: 'Remote Ops Team', type: 'Remote', created: '2026-03-04 08:12', resolved: null, sla: '24h', notes: '' },
+    { id: 'TSK-002', store: 'Tesco Superstore Bristol', storeId: 'tesco-superstore-bristol', cameraId: 'CAM-TESCO-034', issueType: 'PTZ Misaligned', action: 'Realign camera', priority: 'Medium', status: 'In Progress', owner: 'John Smith (Field)', type: 'Field', created: '2026-03-03 14:30', resolved: null, sla: '5 days', notes: 'Contractor dispatched, ETA March 5' },
+    { id: 'TSK-003', store: 'Auchan Boulogne', storeId: 'auchan-boulogne', cameraId: 'CAM-AUCHAN-007', issueType: 'Low Battery', action: 'Replace battery', priority: 'High', status: 'Open', owner: 'Unassigned', type: 'Field', created: '2026-03-04 07:45', resolved: null, sla: '5 days', notes: '' },
+    { id: 'TSK-004', store: 'Carrefour Vélizy', storeId: 'carrefour-velizy', cameraId: 'CAM-CARREF-019', issueType: 'Image Quality Issue', action: 'Investigate camera position', priority: 'Medium', status: 'In Progress', owner: 'Marie Dupont (Field)', type: 'Field', created: '2026-03-02 16:00', resolved: null, sla: '5 days', notes: 'Blur detected on recent captures' },
+    { id: 'TSK-005', store: 'Auchan Boulogne', storeId: 'auchan-boulogne', cameraId: 'CAM-AUCHAN-022', issueType: 'Fallen / Moved Camera', action: 'Re-mount camera', priority: 'Critical', status: 'Open', owner: 'Unassigned', type: 'Field', created: '2026-03-04 06:20', resolved: null, sla: '5 days', notes: 'Orientation anomaly detected' },
+    { id: 'TSK-006', store: 'Tesco Metro London Bridge', storeId: 'tesco-metro-london', cameraId: 'CAM-TESCO-003', issueType: 'Camera Offline', action: 'Restore connectivity', priority: 'Medium', status: 'Resolved', owner: 'Remote Ops Team', type: 'Remote', created: '2026-03-01 10:00', resolved: '2026-03-01 18:30', sla: '24h', notes: 'Firmware update resolved the issue' },
+    { id: 'TSK-007', store: 'Albert Heijn Rotterdam', storeId: 'ah-rotterdam', cameraId: 'CAM-AH-ROT-015', issueType: 'Low Battery', action: 'Replace battery', priority: 'Low', status: 'Resolved', owner: 'Field Team NL', type: 'Field', created: '2026-02-28 09:00', resolved: '2026-03-02 11:00', sla: '5 days', notes: 'Battery replaced, verified by KPI recheck' },
+  ];
+
+  // =========================================================================
+  // STATE
+  // =========================================================================
+  let currentView = 'company';
+  let currentChain = null;
+  let currentStore = null;
+  let currentCamera = null;
+  let currentRole = 'operations';
+  let taskFilter = 'all';
+
+  // =========================================================================
+  // HELPERS
+  // =========================================================================
+  function pct(actual, expected) { return expected === 0 ? 0 : (actual / expected * 100); }
+  function fmtPct(v) { return v.toFixed(1) + '%'; }
+  function fmtNum(v) { return v.toLocaleString('en'); }
+
+  function healthColor(pctVal, type) {
+    const t = {
+      camerasOnline: { green: 95, amber: 90 },
+      imagePipeline: { green: 97, amber: 94 },
+      lowBattery: { green: 5, amber: 10 },
+      imageQuality: { green: 3, amber: 7 },
+    };
+    const th = t[type];
+    if (!th) return 'green';
+    if (type === 'lowBattery' || type === 'imageQuality') {
+      if (pctVal < th.green) return 'green';
+      if (pctVal <= th.amber) return 'amber';
+      return 'red';
+    }
+    if (pctVal > th.green) return 'green';
+    if (pctVal >= th.amber) return 'amber';
+    return 'red';
+  }
+
+  function statusDot(color) {
+    return `<span class="health-dot status-${color}"></span>`;
+  }
+
+  function badgeHTML(color, text) {
+    return `<span class="badge badge-${color}">${statusDot(color)} ${text}</span>`;
+  }
+
+  function priorityBadge(p) {
+    const m = { Critical:'red', High:'red', Medium:'amber', Low:'green' };
+    return `<span class="badge badge-${m[p]||'gray'}">${p}</span>`;
+  }
+
+  function statusBadge(s) {
+    const m = { Open:'blue', 'In Progress':'amber', Resolved:'green' };
+    return `<span class="badge badge-${m[s]||'gray'}">${s}</span>`;
+  }
+
+  function typeBadge(t) {
+    return `<span class="badge ${t==='Remote'?'badge-blue':'badge-gray'}">${t}</span>`;
+  }
+
+  function kpiCard(label, actual, expected, thresholdType, icon) {
+    const p = pct(actual, expected);
+    const color = healthColor(p, thresholdType);
+    const invertDisplay = (thresholdType === 'lowBattery' || thresholdType === 'imageQuality');
+    const displayPct = invertDisplay ? pct(actual, expected) : p;
+    return `
+      <div class="kpi-card">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-medium" style="color:#677b82">${label}</span>
+          ${statusDot(color)}
+        </div>
+        <div class="flex items-baseline gap-2 mb-1">
+          <span class="text-2xl font-bold" style="color:#1c3036">${fmtNum(actual)}</span>
+          <span class="text-sm" style="color:#9aaab0">/ ${fmtNum(expected)}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-lg font-semibold" style="color:${color==='green'?'#12b76a':color==='amber'?'#d97706':'#f04438'}">${fmtPct(displayPct)}</span>
+          ${badgeHTML(color, color === 'green' ? 'Healthy' : color === 'amber' ? 'Warning' : 'Critical')}
+        </div>
+      </div>
+    `;
+  }
+
+  // =========================================================================
+  // AGGREGATE HELPERS
+  // =========================================================================
+  function aggregateStores(stores) {
+    const agg = { cameras: 0, online: 0, battLow: 0, img48A: 0, img48E: 0, uptimeA: 0, uptimeE: 0, blinkA: 0, blinkE: 0, labelsA: 0, labelsE: 0, imgIssues: 0 };
+    stores.forEach(s => {
+      agg.cameras += s.cameras;
+      agg.online += s.online;
+      agg.battLow += s.battLow;
+      agg.img48A += s.img48.actual;
+      agg.img48E += s.img48.expected;
+      agg.uptimeA += s.uptime.actual;
+      agg.uptimeE += s.uptime.expected;
+      agg.blinkA += s.blinkId.actual;
+      agg.blinkE += s.blinkId.expected;
+      agg.labelsA += s.labels.actual;
+      agg.labelsE += s.labels.expected;
+      agg.imgIssues += s.imgIssues;
+    });
+    return agg;
+  }
+
+  function getChainHealth(chain) {
+    const a = aggregateStores(chain.stores);
+    const onlinePct = pct(a.online, a.cameras);
+    const battPct = pct(a.battLow, a.cameras);
+    const imgPct = pct(a.img48A, a.img48E);
+    const issuePct = pct(a.imgIssues, a.cameras);
+    const colors = [
+      healthColor(onlinePct, 'camerasOnline'),
+      healthColor(battPct, 'lowBattery'),
+      healthColor(imgPct, 'imagePipeline'),
+      healthColor(issuePct, 'imageQuality'),
+    ];
+    if (colors.includes('red')) return 'red';
+    if (colors.includes('amber')) return 'amber';
+    return 'green';
+  }
+
+  function getStoreHealth(store) {
+    const onlinePct = pct(store.online, store.cameras);
+    const battPct = pct(store.battLow, store.cameras);
+    const imgPct = pct(store.img48.actual, store.img48.expected);
+    const issuePct = pct(store.imgIssues, store.cameras);
+    const colors = [
+      healthColor(onlinePct, 'camerasOnline'),
+      healthColor(battPct, 'lowBattery'),
+      healthColor(imgPct, 'imagePipeline'),
+      healthColor(issuePct, 'imageQuality'),
+    ];
+    if (colors.includes('red')) return 'red';
+    if (colors.includes('amber')) return 'amber';
+    return 'green';
+  }
+
+  // =========================================================================
+  // NAVIGATION
+  // =========================================================================
+  function navigate(view, chainId, storeId, cameraId) {
+    currentView = view;
+    currentChain = chainId || null;
+    currentStore = storeId || null;
+    currentCamera = cameraId || null;
+    updateNav();
+    updateBreadcrumb();
+    renderView();
+  }
+
+  function updateNav() {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      const v = btn.dataset.view;
+      const isActive = (v === 'tasks' && currentView === 'tasks') ||
+                       (v === 'company' && ['company','chain','store','camera'].includes(currentView));
+      btn.style.background = isActive ? '#1c3036' : 'transparent';
+      btn.style.color = isActive ? 'white' : '#677b82';
+      btn.className = `nav-btn rounded-lg px-3.5 py-1.5 text-sm ${isActive ? 'font-medium' : 'hover:bg-gray-50'} transition`;
+    });
+  }
+
+  function updateBreadcrumb() {
+    const bar = document.getElementById('breadcrumb-bar');
+    const bc = document.getElementById('breadcrumb');
+    if (currentView === 'company' || currentView === 'tasks') {
+      bar.classList.add('hidden');
+      return;
+    }
+    bar.classList.remove('hidden');
+    let crumbs = [{ label: 'Estate', view: 'company' }];
+    if (currentChain) {
+      const chain = CHAINS.find(c => c.id === currentChain);
+      crumbs.push({ label: chain?.name || currentChain, view: 'chain', chainId: currentChain });
+    }
+    if (currentStore) {
+      const chain = CHAINS.find(c => c.id === currentChain);
+      const store = chain?.stores.find(s => s.id === currentStore);
+      crumbs.push({ label: store?.name || currentStore, view: 'store', chainId: currentChain, storeId: currentStore });
+    }
+    if (currentCamera) {
+      crumbs.push({ label: currentCamera, view: 'camera', chainId: currentChain, storeId: currentStore, cameraId: currentCamera });
+    }
+    bc.innerHTML = crumbs.map((c, i) => {
+      const isLast = i === crumbs.length - 1;
+      const sep = i > 0 ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aaab0" stroke-width="2" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>' : '';
+      if (isLast) return `${sep}<span class="font-medium" style="color:#1c3036">${c.label}</span>`;
+      return `${sep}<button class="hover:underline" style="color:#677b82" onclick="navigate('${c.view}'${c.chainId?`,'${c.chainId}'`:''}${c.storeId?`,'${c.storeId}'`:''})">${c.label}</button>`;
+    }).join('');
+  }
+
+  function handleRoleChange() {
+    currentRole = document.getElementById('role-select').value;
+    const initials = { admin: 'AD', operations: 'OP', field: 'FD' };
+    document.querySelector('.rounded-full.flex').textContent = initials[currentRole];
+    renderView();
+  }
+
+  // =========================================================================
+  // RENDER ROUTER
+  // =========================================================================
+  function renderView() {
+    const el = document.getElementById('page-content');
+    el.innerHTML = '';
+    el.className = 'flex flex-col gap-6 fade-in';
+    switch (currentView) {
+      case 'company': renderCompanyView(el); break;
+      case 'chain': renderChainView(el); break;
+      case 'store': renderStoreView(el); break;
+      case 'camera': renderCameraView(el); break;
+      case 'tasks': renderTasksView(el); break;
+    }
+  }
+
+  // =========================================================================
+  // COMPANY VIEW
+  // =========================================================================
+  function renderCompanyView(el) {
+    const allStores = CHAINS.flatMap(c => c.stores);
+    const agg = aggregateStores(allStores);
+
+    el.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-semibold" style="color:#1c3036">Estate Health Overview</h1>
+          <p class="text-sm mt-0.5" style="color:#677b82">${CHAINS.length} chains &middot; ${allStores.length} stores &middot; ${fmtNum(agg.cameras)} cameras</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="pulse health-dot status-green"></span>
+          <span class="text-xs font-medium" style="color:#677b82">Live &middot; Last updated just now</span>
+        </div>
+      </div>
+
+      <!-- KPI GRID -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="company-kpis"></div>
+
+      <!-- ADDITIONAL KPIs -->
+      <div class="grid grid-cols-3 gap-4" id="company-kpis-extra"></div>
+
+      <!-- CHAINS TABLE -->
+      <div>
+        <h2 class="text-base font-semibold mb-3" style="color:#1c3036">Chains</h2>
+        <div class="overflow-hidden rounded-xl border bg-white" style="border-color:#e3eaed" id="chains-table"></div>
+      </div>
+    `;
+
+    document.getElementById('company-kpis').innerHTML = `
+      ${kpiCard('Cameras Online', agg.online, agg.cameras, 'camerasOnline')}
+      ${kpiCard('Battery &lt;20%', agg.battLow, agg.cameras, 'lowBattery')}
+      ${kpiCard('48MP Images', agg.img48A, agg.img48E, 'imagePipeline')}
+      ${kpiCard('Total Camera Uptime', agg.uptimeA, agg.uptimeE, 'imagePipeline')}
+    `;
+
+    document.getElementById('company-kpis-extra').innerHTML = `
+      ${kpiCard('Blink-ID', agg.blinkA, agg.blinkE, 'imagePipeline')}
+      ${kpiCard('Labels Detected', agg.labelsA, agg.labelsE, 'imagePipeline')}
+      ${kpiCard('Image Issues', agg.imgIssues, agg.cameras, 'imageQuality')}
+    `;
+
+    const tbl = document.getElementById('chains-table');
+    let html = `<table style="width:100%;text-align:left;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Chain</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Country</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Stores</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Cameras</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Online</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">48MP</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Health</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66"></th>
+      </tr></thead><tbody>`;
+
+    CHAINS.forEach(chain => {
+      const a = aggregateStores(chain.stores);
+      const health = getChainHealth(chain);
+      const onPct = pct(a.online, a.cameras);
+      const imgPct = pct(a.img48A, a.img48E);
+      html += `<tr class="row-link" style="border-bottom:1px solid #f1f7f9" onclick="navigate('chain','${chain.id}')">
+        <td style="padding:14px 16px;font-size:14px;font-weight:500;color:#1c3036">${chain.name}</td>
+        <td style="padding:14px 16px;font-size:13px;color:#677b82">${chain.country}</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:#3d5761">${chain.stores.length}</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:#3d5761">${a.cameras}</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:#3d5761">${fmtPct(onPct)}</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:#3d5761">${fmtPct(imgPct)}</td>
+        <td style="padding:14px 16px;text-align:center">${badgeHTML(health, health==='green'?'Healthy':health==='amber'?'Warning':'Critical')}</td>
+        <td style="padding:14px 16px;text-align:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aaab0" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    tbl.innerHTML = html;
+  }
+
+  // =========================================================================
+  // CHAIN VIEW
+  // =========================================================================
+  function renderChainView(el) {
+    const chain = CHAINS.find(c => c.id === currentChain);
+    if (!chain) return;
+    const agg = aggregateStores(chain.stores);
+    const health = getChainHealth(chain);
+
+    el.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            ${badgeHTML(health, health==='green'?'Healthy':health==='amber'?'Warning':'Critical')}
+          </div>
+          <h1 class="text-xl font-semibold" style="color:#1c3036">${chain.name}</h1>
+          <p class="text-sm mt-0.5" style="color:#677b82">${chain.country} &middot; ${chain.stores.length} stores &middot; ${fmtNum(agg.cameras)} cameras</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="pulse health-dot status-green"></span>
+          <span class="text-xs font-medium" style="color:#677b82">Live</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="chain-kpis"></div>
+      <div class="grid grid-cols-3 gap-4" id="chain-kpis-extra"></div>
+
+      <div>
+        <h2 class="text-base font-semibold mb-3" style="color:#1c3036">Stores</h2>
+        <div class="overflow-hidden rounded-xl border bg-white" style="border-color:#e3eaed" id="stores-table"></div>
+      </div>
+    `;
+
+    document.getElementById('chain-kpis').innerHTML = `
+      ${kpiCard('Cameras Online', agg.online, agg.cameras, 'camerasOnline')}
+      ${kpiCard('Battery &lt;20%', agg.battLow, agg.cameras, 'lowBattery')}
+      ${kpiCard('48MP Images', agg.img48A, agg.img48E, 'imagePipeline')}
+      ${kpiCard('Total Camera Uptime', agg.uptimeA, agg.uptimeE, 'imagePipeline')}
+    `;
+    document.getElementById('chain-kpis-extra').innerHTML = `
+      ${kpiCard('Blink-ID', agg.blinkA, agg.blinkE, 'imagePipeline')}
+      ${kpiCard('Labels Detected', agg.labelsA, agg.labelsE, 'imagePipeline')}
+      ${kpiCard('Image Issues', agg.imgIssues, agg.cameras, 'imageQuality')}
+    `;
+
+    const tbl = document.getElementById('stores-table');
+    let html = `<table style="width:100%;text-align:left;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Store</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Cameras</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Online</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Low Batt</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">48MP</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Issues</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Health</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66"></th>
+      </tr></thead><tbody>`;
+
+    chain.stores.forEach(store => {
+      const health = getStoreHealth(store);
+      const onPct = pct(store.online, store.cameras);
+      const imgPct = pct(store.img48.actual, store.img48.expected);
+      html += `<tr class="row-link" style="border-bottom:1px solid #f1f7f9" onclick="navigate('store','${chain.id}','${store.id}')">
+        <td style="padding:14px 16px;font-size:14px;font-weight:500;color:#1c3036">${store.name}</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:#3d5761">${store.cameras}</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:#3d5761">${store.online} / ${store.cameras} (${fmtPct(onPct)})</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:${store.battLow>0?'#d97706':'#677b82'}">${store.battLow}</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:#3d5761">${fmtPct(imgPct)}</td>
+        <td style="padding:14px 16px;text-align:center;font-size:13px;color:${store.imgIssues>0?'#f04438':'#677b82'}">${store.imgIssues}</td>
+        <td style="padding:14px 16px;text-align:center">${badgeHTML(health, health==='green'?'Healthy':health==='amber'?'Warning':'Critical')}</td>
+        <td style="padding:14px 16px;text-align:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aaab0" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    tbl.innerHTML = html;
+  }
+
+  // =========================================================================
+  // STORE VIEW
+  // =========================================================================
+  function renderStoreView(el) {
+    const chain = CHAINS.find(c => c.id === currentChain);
+    const store = chain?.stores.find(s => s.id === currentStore);
+    if (!store) return;
+    const health = getStoreHealth(store);
+    const cameras = generateCameras(store);
+
+    el.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            ${badgeHTML(health, health==='green'?'Healthy':health==='amber'?'Warning':'Critical')}
+            <span class="text-xs" style="color:#677b82">${chain.name}</span>
+          </div>
+          <h1 class="text-xl font-semibold" style="color:#1c3036">${store.name}</h1>
+          <p class="text-sm mt-0.5" style="color:#677b82">${store.cameras} installed cameras</p>
+        </div>
+        ${currentRole !== 'field' ? `<button class="rounded-lg px-4 py-2 text-sm font-medium text-white transition hover:opacity-90" style="background:#1c3036" onclick="navigate('tasks')">View Tasks</button>` : ''}
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        ${kpiCard('Cameras Online', store.online, store.cameras, 'camerasOnline')}
+        ${kpiCard('Battery &lt;20%', store.battLow, store.cameras, 'lowBattery')}
+        ${kpiCard('48MP Images', store.img48.actual, store.img48.expected, 'imagePipeline')}
+        ${kpiCard('Total Camera Uptime', store.uptime.actual, store.uptime.expected, 'imagePipeline')}
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        ${kpiCard('Blink-ID', store.blinkId.actual, store.blinkId.expected, 'imagePipeline')}
+        ${kpiCard('Labels Detected', store.labels.actual, store.labels.expected, 'imagePipeline')}
+        ${kpiCard('Image Issues', store.imgIssues, store.cameras, 'imageQuality')}
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base font-semibold" style="color:#1c3036">Cameras (${store.cameras})</h2>
+          <div class="flex items-center gap-2">
+            <span class="text-xs" style="color:#677b82">Filter:</span>
+            <button class="cam-filter tab-btn active" data-filter="all" onclick="filterCameras(this,'all')">All</button>
+            <button class="cam-filter tab-btn" data-filter="offline" onclick="filterCameras(this,'offline')">Offline</button>
+            <button class="cam-filter tab-btn" data-filter="lowbatt" onclick="filterCameras(this,'lowbatt')">Low Battery</button>
+            <button class="cam-filter tab-btn" data-filter="issues" onclick="filterCameras(this,'issues')">Issues</button>
+          </div>
+        </div>
+        <div class="overflow-hidden rounded-xl border bg-white" style="border-color:#e3eaed" id="cameras-table"></div>
+      </div>
+    `;
+
+    renderCamerasTable(cameras, 'all');
+  }
+
+  function filterCameras(btn, filter) {
+    document.querySelectorAll('.cam-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const chain = CHAINS.find(c => c.id === currentChain);
+    const store = chain?.stores.find(s => s.id === currentStore);
+    if (!store) return;
+    const cameras = generateCameras(store);
+    renderCamerasTable(cameras, filter);
+  }
+
+  function renderCamerasTable(cameras, filter) {
+    let filtered = cameras;
+    if (filter === 'offline') filtered = cameras.filter(c => !c.online);
+    else if (filter === 'lowbatt') filtered = cameras.filter(c => c.battery < 20);
+    else if (filter === 'issues') filtered = cameras.filter(c => c.issue !== 'none');
+
+    const tbl = document.getElementById('cameras-table');
+    const issueLabels = { ptz_misaligned: 'PTZ Misaligned', blur: 'Blur Detected', obstruction: 'Obstruction', fallen: 'Fallen Camera', none: 'None' };
+
+    let html = `<table style="width:100%;text-align:left;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Camera ID</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Aisle</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Status</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Battery</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Images (24h)</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Blink-ID</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Issue</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Last Seen</th>
+        <th style="padding:12px 16px"></th>
+      </tr></thead><tbody>`;
+
+    if (filtered.length === 0) {
+      html += `<tr><td colspan="9" style="padding:32px;text-align:center;color:#9aaab0;font-size:14px">No cameras match this filter</td></tr>`;
+    }
+
+    filtered.slice(0, 20).forEach(cam => {
+      const statusColor = cam.online ? 'green' : 'red';
+      const battColor = cam.battery < 20 ? '#f04438' : cam.battery < 40 ? '#d97706' : '#12b76a';
+      const issueColor = cam.issue !== 'none' ? 'red' : 'gray';
+      html += `<tr class="row-link" style="border-bottom:1px solid #f1f7f9" onclick="navigate('camera','${currentChain}','${currentStore}','${cam.id}')">
+        <td style="padding:12px 16px;font-size:13px;font-weight:500;color:#1c3036;font-family:monospace">${cam.id}</td>
+        <td style="padding:12px 16px;font-size:13px;color:#677b82">${cam.aisle}</td>
+        <td style="padding:12px 16px;text-align:center">${badgeHTML(statusColor, cam.online?'Online':'Offline')}</td>
+        <td style="padding:12px 16px;text-align:center"><span style="color:${battColor};font-size:13px;font-weight:500">${cam.battery}%</span></td>
+        <td style="padding:12px 16px;text-align:center;font-size:13px;color:#3d5761">${cam.images24h} / ${cam.expected24h}</td>
+        <td style="padding:12px 16px;text-align:center">${cam.blinkOk ? '<span style="color:#12b76a">&#10003;</span>' : '<span style="color:#f04438">&#10007;</span>'}</td>
+        <td style="padding:12px 16px;text-align:center">${cam.issue !== 'none' ? `<span class="badge badge-${issueColor}">${issueLabels[cam.issue]}</span>` : '<span style="color:#9aaab0;font-size:12px">—</span>'}</td>
+        <td style="padding:12px 16px;font-size:12px;color:#677b82">${cam.lastSeen}</td>
+        <td style="padding:12px 16px;text-align:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aaab0" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    if (filtered.length > 20) {
+      html += `<div style="padding:12px 16px;border-top:1px solid #e3eaed;font-size:12px;color:#677b82;text-align:center">Showing 20 of ${filtered.length} cameras</div>`;
+    }
+    tbl.innerHTML = html;
+  }
+
+  // =========================================================================
+  // CAMERA DETAIL VIEW
+  // =========================================================================
+  function renderCameraView(el) {
+    const chain = CHAINS.find(c => c.id === currentChain);
+    const store = chain?.stores.find(s => s.id === currentStore);
+    if (!store) return;
+    const cameras = generateCameras(store);
+    const cam = cameras.find(c => c.id === currentCamera);
+    if (!cam) return;
+
+    const statusColor = cam.online ? 'green' : 'red';
+    const battColor = cam.battery < 20 ? '#f04438' : cam.battery < 40 ? '#d97706' : '#12b76a';
+    const issueLabels = { ptz_misaligned: 'PTZ Misaligned', blur: 'Blur Detected', obstruction: 'Obstruction', fallen: 'Fallen Camera', none: 'No Issues' };
+
+    const relatedTasks = TASKS.filter(t => t.storeId === currentStore).slice(0, 3);
+
+    el.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            ${badgeHTML(statusColor, cam.online?'Online':'Offline')}
+            ${cam.issue !== 'none' ? `<span class="badge badge-red">${issueLabels[cam.issue]}</span>` : ''}
+          </div>
+          <h1 class="text-xl font-semibold font-mono" style="color:#1c3036">${cam.id}</h1>
+          <p class="text-sm mt-0.5" style="color:#677b82">${store.name} &middot; ${cam.aisle}</p>
+        </div>
+        ${currentRole !== 'field' ? `<button class="rounded-lg px-4 py-2 text-sm font-medium text-white transition hover:opacity-90" style="background:#f04438" onclick="showCreateTask('${cam.id}','${store.name}')">Create Task</button>` : ''}
+      </div>
+
+      <!-- CAMERA DETAILS GRID -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="kpi-card">
+          <span class="text-xs font-medium" style="color:#677b82">Status</span>
+          <div class="mt-2">${badgeHTML(statusColor, cam.online?'Online':'Offline')}</div>
+          <p class="text-xs mt-2" style="color:#9aaab0">Last seen: ${cam.lastSeen}</p>
+        </div>
+        <div class="kpi-card">
+          <span class="text-xs font-medium" style="color:#677b82">Battery Level</span>
+          <p class="text-2xl font-bold mt-2" style="color:${battColor}">${cam.battery}%</p>
+          <div style="height:6px;border-radius:3px;background:#f1f7f9;margin-top:8px">
+            <div style="height:6px;border-radius:3px;background:${battColor};width:${cam.battery}%"></div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <span class="text-xs font-medium" style="color:#677b82">Images (24h)</span>
+          <div class="flex items-baseline gap-2 mt-2">
+            <span class="text-2xl font-bold" style="color:#1c3036">${cam.images24h}</span>
+            <span class="text-sm" style="color:#9aaab0">/ ${cam.expected24h}</span>
+          </div>
+          <p class="text-sm font-medium mt-1" style="color:${cam.images24h >= cam.expected24h * 0.9 ? '#12b76a' : '#f04438'}">${fmtPct(pct(cam.images24h, cam.expected24h))}</p>
+        </div>
+        <div class="kpi-card">
+          <span class="text-xs font-medium" style="color:#677b82">Blink-ID</span>
+          <div class="mt-2">${cam.blinkOk ? badgeHTML('green','Success') : badgeHTML('red','Failed')}</div>
+        </div>
+      </div>
+
+      <!-- DEVICE INFO -->
+      <div class="rounded-xl border bg-white p-5" style="border-color:#e3eaed">
+        <h2 class="text-sm font-semibold mb-4" style="color:#475e66">Device Information</h2>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-y-4 gap-x-8">
+          <div><p class="text-xs" style="color:#9aaab0">Model</p><p class="text-sm font-medium" style="color:#1c3036">${cam.model}</p></div>
+          <div><p class="text-xs" style="color:#9aaab0">Firmware</p><p class="text-sm font-medium" style="color:#1c3036">v${cam.firmware}</p></div>
+          <div><p class="text-xs" style="color:#9aaab0">Installed</p><p class="text-sm font-medium" style="color:#1c3036">${cam.installedDate}</p></div>
+          <div><p class="text-xs" style="color:#9aaab0">Image Quality</p><p class="text-sm font-medium" style="color:${cam.issue!=='none'?'#f04438':'#12b76a'}">${issueLabels[cam.issue]}</p></div>
+        </div>
+      </div>
+
+      <!-- IMAGE CAPTURE TIMELINE -->
+      <div class="rounded-xl border bg-white p-5" style="border-color:#e3eaed">
+        <h2 class="text-sm font-semibold mb-4" style="color:#475e66">Image Capture Timeline (last 24h)</h2>
+        <div id="capture-timeline" style="display:flex;gap:2px;height:40px;align-items:flex-end"></div>
+        <div class="flex justify-between mt-2">
+          <span class="text-xs" style="color:#9aaab0">24h ago</span>
+          <span class="text-xs" style="color:#9aaab0">Now</span>
+        </div>
+      </div>
+
+      <!-- RELATED TASKS -->
+      ${relatedTasks.length > 0 ? `
+      <div>
+        <h2 class="text-base font-semibold mb-3" style="color:#1c3036">Related Tasks</h2>
+        <div class="overflow-hidden rounded-xl border bg-white" style="border-color:#e3eaed">
+          <table style="width:100%;text-align:left;border-collapse:collapse">
+            <thead><tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+              <th style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66">Task ID</th>
+              <th style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66">Issue</th>
+              <th style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Priority</th>
+              <th style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Status</th>
+              <th style="padding:10px 16px;font-size:12px;font-weight:600;color:#475e66">Owner</th>
+            </tr></thead><tbody>
+            ${relatedTasks.map(t => `<tr class="row-link" style="border-bottom:1px solid #f1f7f9" onclick="showTaskDetail('${t.id}')">
+              <td style="padding:12px 16px;font-size:13px;font-weight:500;color:#1c3036;font-family:monospace">${t.id}</td>
+              <td style="padding:12px 16px;font-size:13px;color:#3d5761">${t.issueType}</td>
+              <td style="padding:12px 16px;text-align:center">${priorityBadge(t.priority)}</td>
+              <td style="padding:12px 16px;text-align:center">${statusBadge(t.status)}</td>
+              <td style="padding:12px 16px;font-size:13px;color:#677b82">${t.owner}</td>
+            </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+    `;
+
+    const timeline = document.getElementById('capture-timeline');
+    for (let i = 0; i < 24; i++) {
+      const h = cam.online ? Math.floor(Math.random() * 30) + 10 : (i > 20 ? 0 : Math.floor(Math.random() * 20) + 5);
+      const bar = document.createElement('div');
+      bar.style.cssText = `flex:1;height:${h}px;border-radius:2px;background:${h === 0 ? '#fee2e2' : '#12b76a'};opacity:${h === 0 ? 1 : 0.7};transition:opacity 0.15s`;
+      bar.onmouseenter = () => bar.style.opacity = '1';
+      bar.onmouseleave = () => bar.style.opacity = h === 0 ? '1' : '0.7';
+      bar.title = `${24-i}h ago: ${h === 0 ? 'No capture' : h + ' images'}`;
+      timeline.appendChild(bar);
+    }
+  }
+
+  // =========================================================================
+  // TASKS VIEW (Phase 2)
+  // =========================================================================
+  function renderTasksView(el) {
+    const filtered = taskFilter === 'all' ? TASKS : TASKS.filter(t => t.status === taskFilter);
+    const openCount = TASKS.filter(t => t.status === 'Open').length;
+    const ipCount = TASKS.filter(t => t.status === 'In Progress').length;
+    const resolvedCount = TASKS.filter(t => t.status === 'Resolved').length;
+
+    el.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-semibold" style="color:#1c3036">Task Engine</h1>
+          <p class="text-sm mt-0.5" style="color:#677b82">Phase 2 – Operational task management &amp; SLA tracking</p>
+        </div>
+      </div>
+
+      <!-- TASK SUMMARY CARDS -->
+      <div class="grid grid-cols-4 gap-4">
+        <div class="kpi-card cursor-pointer ${taskFilter==='all'?'ring-2 ring-offset-2':''}" style="${taskFilter==='all'?'ring-color:#1c3036':''}" onclick="setTaskFilter('all')">
+          <span class="text-xs font-medium" style="color:#677b82">Total Tasks</span>
+          <p class="text-2xl font-bold mt-1" style="color:#1c3036">${TASKS.length}</p>
+        </div>
+        <div class="kpi-card cursor-pointer ${taskFilter==='Open'?'ring-2 ring-offset-2':''}" onclick="setTaskFilter('Open')">
+          <span class="text-xs font-medium" style="color:#677b82">Open</span>
+          <p class="text-2xl font-bold mt-1" style="color:#2563eb">${openCount}</p>
+        </div>
+        <div class="kpi-card cursor-pointer ${taskFilter==='In Progress'?'ring-2 ring-offset-2':''}" onclick="setTaskFilter('In Progress')">
+          <span class="text-xs font-medium" style="color:#677b82">In Progress</span>
+          <p class="text-2xl font-bold mt-1" style="color:#d97706">${ipCount}</p>
+        </div>
+        <div class="kpi-card cursor-pointer ${taskFilter==='Resolved'?'ring-2 ring-offset-2':''}" onclick="setTaskFilter('Resolved')">
+          <span class="text-xs font-medium" style="color:#677b82">Resolved</span>
+          <p class="text-2xl font-bold mt-1" style="color:#12b76a">${resolvedCount}</p>
+        </div>
+      </div>
+
+      <!-- SLA INFO -->
+      <div class="rounded-xl border bg-white p-4 flex items-center gap-6" style="border-color:#e3eaed">
+        <div class="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#677b82" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span class="text-xs font-medium" style="color:#677b82">SLA Targets:</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="badge badge-blue">Remote</span>
+          <span class="text-xs" style="color:#3d5761">24 hours</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="badge badge-gray">Field</span>
+          <span class="text-xs" style="color:#3d5761">5 working days</span>
+        </div>
+      </div>
+
+      <!-- TASKS TABLE -->
+      <div class="overflow-hidden rounded-xl border bg-white" style="border-color:#e3eaed" id="tasks-table"></div>
+    `;
+
+    const tbl = document.getElementById('tasks-table');
+    let html = `<table style="width:100%;text-align:left;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid #e3eaed;background:#f7fbfc">
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Task ID</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Store</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Camera</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Issue</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Type</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Priority</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66;text-align:center">Status</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">Owner</th>
+        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#475e66">SLA</th>
+        <th style="padding:12px 16px"></th>
+      </tr></thead><tbody>`;
+
+    if (filtered.length === 0) {
+      html += `<tr><td colspan="10" style="padding:32px;text-align:center;color:#9aaab0;font-size:14px">No tasks match this filter</td></tr>`;
+    }
+
+    filtered.forEach(t => {
+      html += `<tr class="row-link" style="border-bottom:1px solid #f1f7f9" onclick="showTaskDetail('${t.id}')">
+        <td style="padding:12px 16px;font-size:13px;font-weight:500;color:#1c3036;font-family:monospace">${t.id}</td>
+        <td style="padding:12px 16px;font-size:13px;color:#3d5761">${t.store}</td>
+        <td style="padding:12px 16px;font-size:12px;color:#677b82;font-family:monospace">${t.cameraId}</td>
+        <td style="padding:12px 16px;font-size:13px;color:#3d5761">${t.issueType}</td>
+        <td style="padding:12px 16px;text-align:center">${typeBadge(t.type)}</td>
+        <td style="padding:12px 16px;text-align:center">${priorityBadge(t.priority)}</td>
+        <td style="padding:12px 16px;text-align:center">${statusBadge(t.status)}</td>
+        <td style="padding:12px 16px;font-size:13px;color:#677b82">${t.owner}</td>
+        <td style="padding:12px 16px;font-size:12px;color:#677b82">${t.sla}</td>
+        <td style="padding:12px 16px;text-align:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aaab0" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    tbl.innerHTML = html;
+  }
+
+  function setTaskFilter(f) {
+    taskFilter = f;
+    renderView();
+  }
+
+  // =========================================================================
+  // MODALS
+  // =========================================================================
+  function closeModal() {
+    document.getElementById('modal-root').innerHTML = '';
+  }
+
+  function showTaskDetail(taskId) {
+    const t = TASKS.find(x => x.id === taskId);
+    if (!t) return;
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal-panel fade-in">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <p class="text-xs font-medium" style="color:#677b82">Task Detail</p>
+              <h2 class="text-lg font-semibold font-mono" style="color:#1c3036">${t.id}</h2>
+            </div>
+            <button onclick="closeModal()" class="rounded-lg p-2 hover:bg-gray-100">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#677b82" stroke-width="2"><path stroke-linecap="round" d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-5">
+            ${statusBadge(t.status)} ${priorityBadge(t.priority)} ${typeBadge(t.type)}
+          </div>
+          <div class="grid grid-cols-2 gap-4 mb-5">
+            <div><p class="text-xs" style="color:#9aaab0">Store</p><p class="text-sm font-medium" style="color:#1c3036">${t.store}</p></div>
+            <div><p class="text-xs" style="color:#9aaab0">Camera</p><p class="text-sm font-medium font-mono" style="color:#1c3036">${t.cameraId}</p></div>
+            <div><p class="text-xs" style="color:#9aaab0">Issue Type</p><p class="text-sm font-medium" style="color:#1c3036">${t.issueType}</p></div>
+            <div><p class="text-xs" style="color:#9aaab0">Recommended Action</p><p class="text-sm font-medium" style="color:#1c3036">${t.action}</p></div>
+            <div><p class="text-xs" style="color:#9aaab0">Assigned Owner</p><p class="text-sm font-medium" style="color:#1c3036">${t.owner}</p></div>
+            <div><p class="text-xs" style="color:#9aaab0">SLA Target</p><p class="text-sm font-medium" style="color:#1c3036">${t.sla}</p></div>
+            <div><p class="text-xs" style="color:#9aaab0">Created</p><p class="text-sm font-medium" style="color:#1c3036">${t.created}</p></div>
+            <div><p class="text-xs" style="color:#9aaab0">Resolved</p><p class="text-sm font-medium" style="color:#1c3036">${t.resolved || '—'}</p></div>
+          </div>
+          ${t.notes ? `<div class="rounded-lg p-3 mb-5" style="background:#f1f7f9"><p class="text-xs font-medium mb-1" style="color:#677b82">Notes</p><p class="text-sm" style="color:#3d5761">${t.notes}</p></div>` : ''}
+          ${t.status === 'Resolved' ? `<div class="rounded-lg p-3 mb-5" style="background:#ecfdf3"><p class="text-xs font-medium mb-1" style="color:#12b76a">Closed Loop Verification</p><p class="text-sm" style="color:#3d5761">KPI re-checked after resolution. Issue confirmed resolved.</p></div>` : ''}
+          <div class="flex gap-3">
+            ${t.status !== 'Resolved' ? `
+              <button class="flex-1 rounded-lg py-2.5 text-sm font-medium text-white" style="background:#1c3036" onclick="closeModal()">Update Status</button>
+              <button class="flex-1 rounded-lg py-2.5 text-sm font-medium border" style="border-color:#e3eaed;color:#3d5761" onclick="closeModal()">Assign Owner</button>
+            ` : `<button class="flex-1 rounded-lg py-2.5 text-sm font-medium border" style="border-color:#e3eaed;color:#3d5761" onclick="closeModal()">Close</button>`}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function showCreateTask(cameraId, storeName) {
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal-panel fade-in">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-lg font-semibold" style="color:#1c3036">Create Task</h2>
+            <button onclick="closeModal()" class="rounded-lg p-2 hover:bg-gray-100">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#677b82" stroke-width="2"><path stroke-linecap="round" d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="flex flex-col gap-4">
+            <div>
+              <label class="text-xs font-medium" style="color:#677b82">Store</label>
+              <input value="${storeName}" readonly class="w-full mt-1 rounded-lg border px-3 py-2 text-sm" style="border-color:#e3eaed;background:#f7fbfc;color:#3d5761"/>
+            </div>
+            <div>
+              <label class="text-xs font-medium" style="color:#677b82">Camera ID</label>
+              <input value="${cameraId}" readonly class="w-full mt-1 rounded-lg border px-3 py-2 text-sm font-mono" style="border-color:#e3eaed;background:#f7fbfc;color:#3d5761"/>
+            </div>
+            <div>
+              <label class="text-xs font-medium" style="color:#677b82">Issue Type</label>
+              <select class="w-full mt-1 rounded-lg border px-3 py-2 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761">
+                <option>Camera Offline</option>
+                <option>PTZ Misaligned</option>
+                <option>Fallen / Moved Camera</option>
+                <option>Low Battery</option>
+                <option>Image Quality Issue</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium" style="color:#677b82">Priority</label>
+              <select class="w-full mt-1 rounded-lg border px-3 py-2 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761">
+                <option>Critical</option>
+                <option selected>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium" style="color:#677b82">Assign To</label>
+              <select class="w-full mt-1 rounded-lg border px-3 py-2 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761">
+                <option>Unassigned</option>
+                <option>Remote Ops Team</option>
+                <option>John Smith (Field)</option>
+                <option>Marie Dupont (Field)</option>
+                <option>Field Team NL</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium" style="color:#677b82">Notes</label>
+              <textarea class="w-full mt-1 rounded-lg border px-3 py-2 text-sm outline-none" style="border-color:#e3eaed;color:#3d5761;min-height:60px" placeholder="Additional context..."></textarea>
+            </div>
+            <button class="w-full rounded-lg py-2.5 text-sm font-medium text-white" style="background:#1c3036" onclick="closeModal();navigate('tasks')">Create Task</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function showAlerts() {
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal-panel fade-in" style="max-width:720px">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h2 class="text-lg font-semibold" style="color:#1c3036">Active Alerts</h2>
+              <p class="text-xs mt-0.5" style="color:#677b82">${ALERTS.length} active alerts across the estate</p>
+            </div>
+            <button onclick="closeModal()" class="rounded-lg p-2 hover:bg-gray-100">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#677b82" stroke-width="2"><path stroke-linecap="round" d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-xs" style="color:#677b82">Channels:</span>
+            <span class="badge badge-gray">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Email
+            </span>
+            <span class="badge badge-gray">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              Teams
+            </span>
+          </div>
+          <div class="flex flex-col gap-3">
+            ${ALERTS.map(a => `
+              <div class="rounded-xl border p-4 row-link" style="border-color:${a.severity==='red'?'#fecaca':'#fef3c7'};background:${a.severity==='red'?'#fef2f2':'#fffbeb'}" onclick="closeModal();${a.store?`navigate('store','${a.chain}','${a.store}')`:a.chain?`navigate('chain','${a.chain}')`:``}">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    ${a.severity === 'red' ? statusDot('red') : statusDot('amber')}
+                    <span class="text-xs font-medium uppercase" style="color:#677b82">${a.level} Alert</span>
+                    <span class="text-xs" style="color:#9aaab0">${a.id}</span>
+                  </div>
+                  <span class="text-xs" style="color:#9aaab0">${a.time}</span>
+                </div>
+                <p class="text-sm font-medium" style="color:#1c3036">${a.title}</p>
+                <p class="text-xs mt-1" style="color:#677b82">${a.description}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // =========================================================================
+  // INIT
+  // =========================================================================
+  navigate('company');
+  </script>
+</body>
+</html>
